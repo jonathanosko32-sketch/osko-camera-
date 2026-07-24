@@ -10,10 +10,7 @@
 </head>
 <body>
   <main class="app-shell">
-    <header class="topbar">
-      <div><p class="eyebrow">OSKO</p><h1>Camera</h1></div>
-      <span id="status" class="status">Ready</span>
-    </header>
+    <header class="topbar"><div><p class="eyebrow">OSKO</p><h1>Camera</h1></div><span id="status" class="status">Ready</span></header>
 
     <section id="cameraCard" class="camera-card" aria-label="Camera preview">
       <video id="preview" autoplay playsinline muted></video>
@@ -21,6 +18,7 @@
       <div id="gridOverlay" class="grid-overlay" hidden></div>
       <div id="emptyState" class="empty-state"><strong>Camera is off</strong><span>Tap Start Camera.</span></div>
       <div id="recordingBadge" class="recording-badge" hidden>● Recording</div>
+      <div id="steadyBadge" class="steady-badge" hidden>STEADY</div>
       <div id="countdown" class="countdown" hidden></div>
       <button id="fullscreenBtn" class="fullscreen-btn" type="button" aria-label="Full screen">⛶</button>
       <div class="viewfinder-controls">
@@ -33,8 +31,9 @@
     <div id="errorBox" class="error-box" hidden></div>
 
     <section class="quick-tools" aria-label="Camera options">
-      <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="260" step="5" value="150"><span id="brightnessValue">150%</span></label>
+      <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="280" step="5" value="150"><span id="brightnessValue">150%</span></label>
       <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0×</span></label>
+      <label class="toggle"><input id="steadyToggle" type="checkbox" checked><span>Steady mode</span></label>
       <label class="toggle"><input id="nightToggle" type="checkbox"><span>Night boost</span></label>
       <label class="toggle"><input id="torchToggle" type="checkbox" disabled><span>Flashlight</span></label>
       <label class="toggle"><input id="gridToggle" type="checkbox"><span>Grid</span></label>
@@ -51,19 +50,12 @@
       <label class="native-button">Use Phone Camera<input id="nativeCapture" type="file" accept="image/*,video/*" capture="environment"></label>
     </section>
 
-    <section class="gallery-section">
-      <div class="section-heading"><h2>Recent captures</h2><button id="clearBtn" class="text-button" type="button">Clear</button></div>
-      <div id="gallery" class="gallery"><p class="gallery-empty">Photos and videos will appear here.</p></div>
-    </section>
+    <section class="gallery-section"><div class="section-heading"><h2>Recent captures</h2><button id="clearBtn" class="text-button" type="button">Clear</button></div><div id="gallery" class="gallery"><p class="gallery-empty">Photos and videos will appear here.</p></div></section>
   </main>
 
   <nav class="bottom-dock" aria-label="Main camera controls">
-    <button id="dockStart" type="button">Start</button>
-    <button id="dockPhoto" type="button" disabled>Photo</button>
-    <button id="dockVideo" type="button" disabled>Video</button>
-    <button id="dockSwitch" type="button" disabled>Flip</button>
+    <button id="dockStart" type="button">Start</button><button id="dockPhoto" type="button" disabled>Photo</button><button id="dockVideo" type="button" disabled>Video</button><button id="dockSwitch" type="button" disabled>Flip</button>
   </nav>
-
   <script src="app.js"></script>
 </body>
 </html>
