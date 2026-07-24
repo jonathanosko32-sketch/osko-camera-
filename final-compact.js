@@ -1,32 +1,15 @@
 (()=>{
   const main=document.querySelector('.app-shell');
   const camera=document.getElementById('cameraCard');
+  const errorBox=document.getElementById('errorBox');
+  const primary=document.querySelector('.primary-actions');
   const settings=document.querySelector('.settings-panel');
   const code=document.getElementById('codeScannerPanel');
   const scans=document.getElementById('scanSession');
   const tools=document.querySelector('.osko-tools');
+  const nativeButton=document.querySelector('.native-button');
   const gallerySection=document.querySelector('.gallery-section');
   if(!main||!camera)return;
-
-  function scrollToEl(el){if(!el)return;el.scrollIntoView({behavior:'smooth',block:'start'});}
-  const nav=document.createElement('nav');
-  nav.className='compact-nav';
-  nav.setAttribute('aria-label','OSKO Camera sections');
-  nav.innerHTML='<button type="button" data-go="camera">Camera</button><button type="button" data-go="scan">Scan</button><button type="button" data-go="tools">Tools</button><button type="button" data-go="gallery">Pictures</button>';
-  camera.before(nav);
-  nav.addEventListener('click',e=>{
-    const b=e.target.closest('[data-go]'); if(!b)return;
-    const go=b.dataset.go;
-    if(go==='camera')scrollToEl(camera);
-    if(go==='scan'){
-      const mode=document.getElementById('modeSelect');
-      if(mode){mode.value='scanner';mode.dispatchEvent(new Event('change'));}
-      if(settings)settings.open=true;
-      scrollToEl(settings||camera);
-    }
-    if(go==='tools')scrollToEl(tools);
-    if(go==='gallery')scrollToEl(gallerySection);
-  });
 
   function wrap(title,nodes,open=false){
     const valid=nodes.filter(Boolean).filter(n=>n.isConnected);
@@ -43,8 +26,8 @@
   }
 
   if(settings){settings.open=false;settings.querySelector('summary').textContent='Camera controls';}
-  wrap('Universal code scanner',[code],false);
-  wrap('Paperwork pages and PDF',[scans],false);
+  const universalSection=wrap('Universal code scanner',[code],false);
+  const paperworkSection=wrap('Paperwork pages and PDF',[scans],false);
 
   if(tools){
     const voice=tools.querySelector('.voice-box');
@@ -62,11 +45,47 @@
     wrap('Photo workshop',[workshop],false);
   }
 
-  const mode=document.getElementById('modeSelect');
-  mode?.addEventListener('change',()=>{
-    if(mode.value==='codes')setTimeout(()=>scrollToEl(code?.closest('.compact-section')||code),80);
-    if(mode.value==='scanner')setTimeout(()=>scrollToEl(settings),80);
+  const nav=document.createElement('nav');
+  nav.className='compact-nav';
+  nav.setAttribute('aria-label','OSKO Camera sections');
+  nav.innerHTML='<button type="button" data-view="camera">Camera</button><button type="button" data-view="scan">Scan</button><button type="button" data-view="tools">Tools</button><button type="button" data-view="gallery">Pictures</button>';
+  camera.before(nav);
+
+  const cameraItems=[camera,errorBox,primary,settings].filter(Boolean);
+  const scanItems=[universalSection,paperworkSection].filter(Boolean);
+  const toolItems=[tools,nativeButton].filter(Boolean);
+  const galleryItems=[gallerySection].filter(Boolean);
+  const groups={camera:cameraItems,scan:scanItems,tools:toolItems,gallery:galleryItems};
+
+  function setView(view,scroll=true){
+    Object.entries(groups).forEach(([name,items])=>items.forEach(el=>el.classList.toggle('app-view-hidden',name!==view)));
+    nav.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view));
+    localStorage.setItem('osko-camera-view',view);
+    if(view==='scan'){
+      const mode=document.getElementById('modeSelect');
+      if(mode&&mode.value!=='codes'&&mode.value!=='scanner'){
+        mode.value='codes';
+        mode.dispatchEvent(new Event('change'));
+      }
+    }
+    if(scroll)window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  nav.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-view]');
+    if(btn)setView(btn.dataset.view);
   });
 
+  const mode=document.getElementById('modeSelect');
+  mode?.addEventListener('change',()=>{
+    if(mode.value==='codes'||mode.value==='scanner')setView('scan',false);
+  });
+
+  document.querySelectorAll('.compact-section').forEach(section=>section.addEventListener('toggle',()=>{
+    if(!section.open)return;
+    document.querySelectorAll('.compact-section').forEach(other=>{if(other!==section)other.open=false;});
+  }));
+
+  setView(localStorage.getItem('osko-camera-view')||'camera',false);
   document.documentElement.classList.add('osko-compact-ready');
 })();
