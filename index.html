@@ -19,6 +19,7 @@
       <div id="emptyState" class="empty-state"><strong>Camera is off</strong><span>Tap Start Camera.</span></div>
       <div id="recordingBadge" class="recording-badge" hidden>● Recording</div>
       <div id="steadyBadge" class="steady-badge" hidden>STEADY</div>
+      <div id="modeBadge" class="mode-badge">NORMAL</div>
       <div id="countdown" class="countdown" hidden></div>
       <button id="quickTorchBtn" class="quick-light" type="button" aria-label="Rear flash">REAR FLASH</button>
       <button id="fullscreenBtn" class="fullscreen-btn" type="button" aria-label="Full screen">⛶</button>
@@ -41,6 +42,7 @@
     <details class="settings-panel">
       <summary>Camera settings</summary>
       <section class="quick-tools" aria-label="Camera options">
+        <label class="select-tool mode-tool">Mode<select id="modeSelect"><option value="normal">Normal</option><option value="eighties">80s</option><option value="document">Document</option><option value="night">Dark walk</option></select></label>
         <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="320" step="5" value="150"><span id="brightnessValue">150%</span></label>
         <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0×</span></label>
         <label class="toggle"><input id="steadyToggle" type="checkbox" checked><span>Steady mode</span></label>
