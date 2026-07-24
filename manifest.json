@@ -12,5 +12,12 @@
   "orientation": "any",
   "categories": ["photo", "utilities", "productivity"],
   "prefer_related_applications": false,
-  "icons": []
+  "icons": [
+    {
+      "src": "./osko-camera-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
