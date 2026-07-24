@@ -5,48 +5,47 @@
   if(!voiceBtn)return;
 
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const WAKE_KEY='osko-sky-hands-free-v1';
   let recognition=null;
   let listening=false;
+  let handsFree=localStorage.getItem(WAKE_KEY)==='1';
+  let restarting=false;
+  let speaking=false;
+  let pendingPhoto=false;
+  let photoTimer=null;
 
   function status(message){
     if(voiceStatus)voiceStatus.textContent=message;
     if(typeof setStatus==='function')setStatus(message);
   }
+  function updateButton(){
+    voiceBtn.textContent=handsFree?(listening?'Sky listening':'Start Sky listening'):'Enable hands-free Sky';
+    voiceBtn.classList.toggle('active',listening);
+  }
+  function stopRecognition(){
+    try{recognition?.stop()}catch{}
+  }
+  function restartSoon(delay=450){
+    if(!handsFree||speaking||document.hidden||restarting)return;
+    restarting=true;
+    setTimeout(()=>{
+      restarting=false;
+      if(!handsFree||speaking||document.hidden||listening)return;
+      try{recognition.start()}catch{}
+    },delay);
+  }
   function speak(message){
-    if(!('speechSynthesis'in window))return;
+    if(!('speechSynthesis'in window)){restartSoon();return}
+    speaking=true;
+    stopRecognition();
     speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(message);
     u.rate=.95;
+    u.onend=u.onerror=()=>{speaking=false;restartSoon(300)};
     speechSynthesis.speak(u);
   }
-  function click(id){
-    const el=document.getElementById(id);
-    if(!el)return false;
-    el.click();
-    return true;
-  }
-  function setMode(value){
-    const mode=$('#modeSelect');
-    if(!mode)return false;
-    mode.value=value;
-    mode.dispatchEvent(new Event('change',{bubbles:true}));
-    return true;
-  }
-  function toggle(id,on){
-    const el=document.getElementById(id);
-    if(!el)return false;
-    el.checked=typeof on==='boolean'?on:!el.checked;
-    el.dispatchEvent(new Event('change',{bubbles:true}));
-    return true;
-  }
-  function setRange(id,value){
-    const el=document.getElementById(id);
-    if(!el)return false;
-    const min=Number(el.min||0),max=Number(el.max||100);
-    el.value=Math.max(min,Math.min(max,value));
-    el.dispatchEvent(new Event('input',{bubbles:true}));
-    return true;
-  }
+  function click(id){const el=document.getElementById(id);if(!el)return false;el.click();return true}
+  function setMode(value){const mode=$('#modeSelect');if(!mode)return false;mode.value=value;mode.dispatchEvent(new Event('change',{bubbles:true}));return true}
   function sectionFor(selector){return $(selector)?.closest('.compact-section')||$(selector)}
   function closeAllDrawers(){document.querySelectorAll('details.compact-section').forEach(d=>d.open=false)}
   function openDrawerByText(words){
@@ -55,7 +54,7 @@
       const t=(d.querySelector('summary')?.textContent||'').toLowerCase();
       return terms.some(word=>t.includes(word));
     });
-    if(drawer){closeAllDrawers();drawer.open=true;return drawer}
+    if(drawer){closeAllDrawers();drawer.open=true;drawer.classList.remove('app-view-hidden');return drawer}
     return null;
   }
   function setView(view){
@@ -73,18 +72,15 @@
   function moveTo(el){setTimeout(()=>el?.scrollIntoView({behavior:'smooth',block:'start'}),120)}
   async function ensureCamera(){
     if(typeof stream!=='undefined'&&stream)return true;
-    if(typeof startCamera==='function'){
-      await startCamera();
-      return typeof stream!=='undefined'&&!!stream;
-    }
-    click('startBtn');
-    return false;
+    if(typeof startCamera==='function'){await startCamera();return typeof stream!=='undefined'&&!!stream}
+    click('startBtn');return false;
   }
-  async function openCamera(){
+  async function bringCameraUp(){
     closeAllDrawers();setView('camera');
     const ok=await ensureCamera();
     moveTo($('#cameraCard'));
-    status(ok?'Camera open':'Tap Start and allow camera permission');
+    status(ok?'Camera is up':'Tap Start and allow camera permission');
+    speak(ok?'Camera is ready':'Please allow camera permission');
   }
   async function openPaperScanner(color){
     setView('scan');
@@ -93,103 +89,113 @@
     const colorSelect=$('#scanColorSelect');
     if(colorSelect&&color){colorSelect.value=color;colorSelect.dispatchEvent(new Event('change',{bubbles:true}))}
     await ensureCamera();
-    drawer?.classList.remove('app-view-hidden');
-    moveTo($('#cameraCard'));
+    moveTo(drawer||$('#cameraCard'));
     status('Paperwork scanner open');
+    speak('Paperwork scanner open');
   }
-  async function openCodeScanner(){
-    setView('scan');
-    openDrawerByText(['universal code','code scanner']);
-    setMode('codes');
-    await ensureCamera();
-    moveTo($('#cameraCard'));
-    status('Code scanner open');
+  function openToolsDrawer(words,label){setView('tools');const drawer=openDrawerByText(words);moveTo(drawer||$('.osko-tools'));status(`${label} open`);speak(`${label} open`)}
+  function cancelPendingPhoto(message='Picture canceled'){
+    pendingPhoto=false;
+    clearTimeout(photoTimer);
+    photoTimer=null;
+    status(message);
   }
-  function openToolsDrawer(words,label){
-    setView('tools');
-    const drawer=openDrawerByText(words);
-    moveTo(drawer||$('.osko-tools'));
-    status(`${label} open`);
+  async function armPhoto(){
+    await bringCameraUp();
+    pendingPhoto=true;
+    status('Say “Sky, take it” when ready');
+    speak('Camera ready. Say Sky take it when you are ready');
+  }
+  async function takeConfirmedPhoto(){
+    if(!pendingPhoto){
+      await bringCameraUp();
+      pendingPhoto=true;
+      status('Say “Sky, take it” when ready');
+      speak('Camera ready. Say Sky take it when you are ready');
+      return;
+    }
+    pendingPhoto=false;
+    status('Taking picture in 3 seconds');
+    speak('Three seconds');
+    clearTimeout(photoTimer);
+    photoTimer=setTimeout(async()=>{
+      if(typeof takePhoto==='function')await takePhoto();
+      status('Picture taken');
+      speak('Picture taken');
+    },3000);
   }
 
   async function run(spoken){
     const original=String(spoken||'').trim();
-    let c=original.toLowerCase().replace(/\b(hey\s+)?(sky|skie)\b/g,'').trim();
+    const lower=original.toLowerCase();
+    const hasWake=/\b(hey\s+)?(sky|skie)\b/.test(lower);
+    if(!hasWake)return;
+    const c=lower.replace(/\b(hey\s+)?(sky|skie)\b/g,'').trim();
     if(!c)return;
     status(`Heard: ${original}`);
 
-    if(/close everything|collapse everything|hide everything/.test(c)){closeAllDrawers();setView('camera');moveTo($('#cameraCard'));speak('Everything closed');return}
-    if(/open|show|go to/.test(c)&&/(document scanner|paperwork scanner|scan document|document scan)/.test(c)){await openPaperScanner();speak('Paperwork scanner open');return}
-    if(/color scan/.test(c)){await openPaperScanner('color');speak('Color scanner ready');return}
-    if(/gray|grayscale/.test(c)){await openPaperScanner('gray');speak('Grayscale scanner ready');return}
-    if(/black.*white/.test(c)){await openPaperScanner('bw');speak('Black and white scanner ready');return}
-    if(/open|show|go to/.test(c)&&/(universal|barcode|qr|code scanner)/.test(c)){await openCodeScanner();speak('Code scanner open');return}
-    if(/open|show|go to/.test(c)&&/scan/.test(c)){await openPaperScanner();speak('Scanner open');return}
+    if(/stop listening|go to sleep|quit listening/.test(c)){handsFree=false;localStorage.setItem(WAKE_KEY,'0');stopRecognition();updateButton();status('Sky listening off');return}
+    if(/cancel|never mind/.test(c)){cancelPendingPhoto();speak('Canceled');return}
+    if(/close everything|collapse everything|hide everything/.test(c)){cancelPendingPhoto();closeAllDrawers();setView('camera');moveTo($('#cameraCard'));speak('Everything closed');return}
 
-    if(/open|start/.test(c)&&/camera/.test(c)){await openCamera();speak('Camera open');return}
-    if(/stop|close|turn off/.test(c)&&/camera/.test(c)){if(typeof stream!=='undefined'&&stream&&typeof stopCamera==='function')await stopCamera();setView('camera');moveTo($('#cameraCard'));speak('Camera stopped');return}
-    if((/take|snap|capture/.test(c)&&/(photo|picture)/.test(c))||/^(photo|picture)$/.test(c)){await openCamera();if(typeof takePhoto==='function')await takePhoto();speak('Picture taken');return}
-    if(/start|record/.test(c)&&/video/.test(c)){await openCamera();if(typeof toggleRecording==='function')toggleRecording();speak('Video recording');return}
+    if(/bring.*camera.*up|camera.*up|open.*camera|show.*camera|go to.*camera/.test(c)){cancelPendingPhoto('Camera selected');await bringCameraUp();return}
+    if(/close.*camera|turn.*camera.*off|stop.*camera/.test(c)){cancelPendingPhoto();if(typeof stream!=='undefined'&&stream&&typeof stopCamera==='function')await stopCamera();setView('camera');moveTo($('#cameraCard'));speak('Camera stopped');return}
+    if(/get ready.*picture|ready.*picture|prepare.*picture|take.*picture|take.*photo/.test(c)){await armPhoto();return}
+    if(/take it|snap it|shoot now|take now/.test(c)){await takeConfirmedPhoto();return}
+
+    if(/open|show|go to/.test(c)&&/(document scanner|paperwork scanner|scan document|document scan)/.test(c)){await openPaperScanner();return}
+    if(/color scan/.test(c)){await openPaperScanner('color');return}
+    if(/gray|grayscale/.test(c)){await openPaperScanner('gray');return}
+    if(/black.*white/.test(c)){await openPaperScanner('bw');return}
+    if(/open|show|go to/.test(c)&&/(universal|barcode|qr|code scanner)/.test(c)){setView('scan');openDrawerByText(['universal code','code scanner']);setMode('codes');await ensureCamera();moveTo($('#cameraCard'));speak('Code scanner open');return}
+    if(/open|show|go to/.test(c)&&/scan/.test(c)){await openPaperScanner();return}
+    if(/scan page|add page|capture page/.test(c)){await openPaperScanner();if(typeof captureNow==='function')await captureNow(true);speak('Scan page added');return}
+
+    if(/open|show|go to/.test(c)&&/(pictures|gallery|photos)/.test(c)){cancelPendingPhoto();closeAllDrawers();setView('gallery');moveTo($('.gallery-section'));speak('Pictures open');return}
+    if(/open|show|go to/.test(c)&&/tools/.test(c)){cancelPendingPhoto();closeAllDrawers();setView('tools');moveTo($('.osko-tools'));speak('Tools open');return}
+    if(/open|show|go to/.test(c)&&/save/.test(c)){openToolsDrawer(['save, folders','watermark'],'Save tools');return}
+    if(/open|show|go to/.test(c)&&/notes?/.test(c)){openToolsDrawer(['notes and skie','notes'],'Notes');return}
+    if(/open|show|go to/.test(c)&&/(stickers?|emojis?)/.test(c)){openToolsDrawer(['emojis and stickers','stickers'],'Stickers');return}
+    if(/open|show|go to/.test(c)&&/(photo workshop|workshop)/.test(c)){openToolsDrawer(['photo workshop','workshop'],'Photo workshop');return}
+    if(/close|hide/.test(c)&&/(tools|pictures|scanner|scan|notes|stickers|save|workshop)/.test(c)){closeAllDrawers();setView('camera');moveTo($('#cameraCard'));speak('Closed');return}
+
+    if(/start|record/.test(c)&&/video/.test(c)){await bringCameraUp();if(typeof toggleRecording==='function')toggleRecording();speak('Video recording');return}
     if(/stop/.test(c)&&/(video|recording)/.test(c)){if(typeof toggleRecording==='function')toggleRecording();speak('Video stopped');return}
     if(/flip|switch/.test(c)&&/(camera|view)/.test(c)){if(typeof switchCamera==='function')await switchCamera();speak('Camera switched');return}
     if(/flash|torch|rear light/.test(c)&&/on/.test(c)){if(typeof setRearFlash==='function')await setRearFlash(true);speak('Rear light on');return}
     if(/flash|torch|rear light/.test(c)&&/off/.test(c)){if(typeof setRearFlash==='function')await setRearFlash(false);speak('Rear light off');return}
-    if(/selfie light/.test(c)&&/on/.test(c)){toggle('screenLightToggle',true);speak('Selfie light on');return}
-    if(/selfie light/.test(c)&&/off/.test(c)){toggle('screenLightToggle',false);speak('Selfie light off');return}
-
-    if(/scan page|add page|capture page/.test(c)){await openPaperScanner();if(typeof captureNow==='function')await captureNow(true);speak('Scan page added');return}
-    if(/print|save pdf/.test(c)){setView('scan');click('printScansBtn');speak('Opening PDF');return}
-    if(/share scans?/.test(c)){setView('scan');click('shareScansBtn');return}
-
     if(/normal mode|modern mode|2026/.test(c)){setView('camera');setMode('normal');speak('Normal mode');return}
     if(/80s|eighties/.test(c)){setView('camera');setMode('eighties');speak('Eighties mode');return}
     if(/document mode/.test(c)){setView('camera');setMode('document');speak('Document mode');return}
     if(/night|dark walk/.test(c)){setView('camera');setMode('night');speak('Night mode');return}
-    if(/steady/.test(c)&&/on/.test(c)){toggle('steadyToggle',true);speak('Steady mode on');return}
-    if(/steady/.test(c)&&/off/.test(c)){toggle('steadyToggle',false);speak('Steady mode off');return}
-    if(/grid/.test(c)&&/on/.test(c)){toggle('gridToggle',true);speak('Grid on');return}
-    if(/grid/.test(c)&&/off/.test(c)){toggle('gridToggle',false);speak('Grid off');return}
-    if(/date.*stamp/.test(c)&&/on/.test(c)){toggle('stampToggle',true);speak('Date stamp on');return}
-    if(/date.*stamp/.test(c)&&/off/.test(c)){toggle('stampToggle',false);speak('Date stamp off');return}
-    if(/location.*stamp/.test(c)&&/on/.test(c)){toggle('locationToggle',true);speak('Location stamp on');return}
-    if(/location.*stamp/.test(c)&&/off/.test(c)){toggle('locationToggle',false);speak('Location stamp off');return}
-    const zoom=c.match(/zoom(?: to)?\s*(\d+(?:\.\d+)?)/);if(zoom){setRange('zoomRange',Number(zoom[1]));speak(`Zoom ${zoom[1]}`);return}
-    const bright=c.match(/brightness(?: to)?\s*(\d+)/);if(bright){setRange('brightnessRange',Number(bright[1]));speak(`Brightness ${bright[1]} percent`);return}
-    const timer=c.match(/timer(?: for)?\s*(3|5|10)/);if(timer){const el=$('#timerSelect');if(el){el.value=timer[1];el.dispatchEvent(new Event('change',{bubbles:true}))}speak(`${timer[1]} second timer`);return}
-    if(/timer off/.test(c)){const el=$('#timerSelect');if(el)el.value='0';speak('Timer off');return}
+    if(/save last|save picture|save photo/.test(c)){openToolsDrawer(['save, folders','watermark'],'Save tools');click('saveLastBtn');return}
 
-    if(/open|show|go to/.test(c)&&/(pictures|gallery|photos)/.test(c)){closeAllDrawers();setView('gallery');moveTo($('.gallery-section'));speak('Pictures open');return}
-    if(/open|show|go to/.test(c)&&/tools/.test(c)){closeAllDrawers();setView('tools');moveTo($('.osko-tools'));speak('Tools open');return}
-    if(/open|show|go to/.test(c)&&/save/.test(c)){openToolsDrawer(['save, folders','watermark'],'Save tools');speak('Save tools open');return}
-    if(/open|show|go to/.test(c)&&/notes?/.test(c)){openToolsDrawer(['notes and skie','notes'],'Notes');speak('Notes open');return}
-    if(/open|show|go to/.test(c)&&/(stickers?|emojis?)/.test(c)){openToolsDrawer(['emojis and stickers','stickers'],'Stickers');speak('Stickers open');return}
-    if(/open|show|go to/.test(c)&&/(photo workshop|workshop)/.test(c)){openToolsDrawer(['photo workshop','workshop'],'Photo workshop');speak('Photo workshop open');return}
-    if(/close|hide/.test(c)&&/(tools|pictures|scanner|scan|notes|stickers|save|workshop)/.test(c)){closeAllDrawers();setView('camera');moveTo($('#cameraCard'));speak('Closed');return}
-
-    if(/save last|save picture|save photo/.test(c)){openToolsDrawer(['save, folders','watermark'],'Save tools');click('saveLastBtn');speak('Saving last picture');return}
-    if(/share last|send picture|send photo/.test(c)){click('shareLastBtn');return}
-    if(/website copy/.test(c)){click('websiteCopyBtn')||click('saveWebsiteBtn');speak('Making website copy');return}
-    if(/job proof/.test(c)){setView('tools');click('jobProofBtn');return}
-    if(/before.*after/.test(c)){setView('tools');click('beforeAfterBtn');return}
-    if(/damage markup|mark damage/.test(c)){setView('tools');click('damageBtn');return}
-    if(/aurora burst|burst/.test(c)){setView('tools');click('auroraBurstBtn');return}
-    if(/backup/.test(c)){setView('tools');click('backupBtn');return}
-    if(/read notes/.test(c)){openToolsDrawer(['notes and skie','notes'],'Notes');click('readNotesBtn');return}
-    if(/clear notes/.test(c)){openToolsDrawer(['notes and skie','notes'],'Notes');click('clearNotesBtn');return}
-    const note=original.match(/(?:write|save|make|take) (?:a )?note(?: down)?[,:]?\s*(.*)/i);
-    if(note){openToolsDrawer(['notes and skie','notes'],'Notes');const input=$('#noteInput');if(input)input.value=note[1]||'';click('saveNoteBtn');speak('Note saved');return}
-
-    status('I did not recognize that command');
+    status('I did not recognize that Sky command');
     speak('I did not recognize that command');
   }
 
-  if(!Recognition){voiceBtn.disabled=true;status('Voice commands need Chrome speech support');return}
+  if(!Recognition){voiceBtn.disabled=true;status('Hands-free voice needs Chrome speech support');return}
   recognition=new Recognition();
-  recognition.lang='en-US';recognition.interimResults=false;recognition.continuous=false;
-  recognition.onstart=()=>{listening=true;voiceBtn.textContent='Listening…';voiceBtn.classList.add('active');status('Say: Sky, open the camera');};
+  recognition.lang='en-US';
+  recognition.interimResults=false;
+  recognition.continuous=false;
+  recognition.onstart=()=>{listening=true;updateButton();status('Sky is listening. Say “Sky, bring the camera up.”')};
   recognition.onresult=e=>run(e.results[0][0].transcript).catch(err=>{console.error(err);status('Voice command failed')});
-  recognition.onerror=e=>status(`Voice error: ${e.error}`);
-  recognition.onend=()=>{listening=false;voiceBtn.textContent='Talk to Skie';voiceBtn.classList.remove('active');};
-  voiceBtn.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();if(listening)recognition.stop();else recognition.start();},true);
+  recognition.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      handsFree=false;localStorage.setItem(WAKE_KEY,'0');status('Microphone permission is blocked');
+    }else if(e.error!=='no-speech'&&e.error!=='aborted')status(`Voice error: ${e.error}`);
+  };
+  recognition.onend=()=>{listening=false;updateButton();restartSoon(500)};
+  voiceBtn.addEventListener('click',e=>{
+    e.preventDefault();e.stopImmediatePropagation();
+    handsFree=!handsFree;
+    localStorage.setItem(WAKE_KEY,handsFree?'1':'0');
+    if(handsFree){status('Hands-free Sky enabled');restartSoon(20)}else{stopRecognition();status('Sky listening off')}
+    updateButton();
+  },true);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopRecognition();else restartSoon(300)});
   window.oskoRunVoiceCommand=run;
+  updateButton();
+  if(handsFree)restartSoon(700);
 })();
