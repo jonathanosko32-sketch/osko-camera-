@@ -1,12 +1,16 @@
 {
-  "name": "OSKO Camera",
-  "short_name": "OSKO Camera",
-  "description": "A private, lightweight camera app for photos and video.",
+  "id": "./?app=alaska-ice-crystals-camera",
+  "name": "Alaska Ice Crystals Camera",
+  "short_name": "Ice Camera",
+  "description": "The Alaska Ice Crystals camera for photos, video, document scanning, codes, notes, project saving, and Skie tools.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#04111d",
   "theme_color": "#071827",
   "orientation": "any",
+  "categories": ["photo", "utilities", "productivity"],
+  "prefer_related_applications": false,
   "icons": []
 }
