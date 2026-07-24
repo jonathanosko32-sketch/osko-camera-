@@ -16,6 +16,7 @@
       <video id="preview" autoplay playsinline muted></video>
       <canvas id="canvas" hidden></canvas>
       <div id="gridOverlay" class="grid-overlay" hidden></div>
+      <div id="scanFrame" class="scan-frame" hidden><span></span></div>
       <div id="emptyState" class="empty-state"><strong>Camera is off</strong><span>Tap Start Camera.</span></div>
       <div id="recordingBadge" class="recording-badge" hidden>● Recording</div>
       <div id="steadyBadge" class="steady-badge" hidden>STEADY</div>
@@ -39,10 +40,17 @@
       <button id="switchBtn" type="button" disabled>Switch Camera</button>
     </section>
 
-    <details class="settings-panel">
+    <details class="settings-panel" open>
       <summary>Camera settings</summary>
       <section class="quick-tools" aria-label="Camera options">
-        <label class="select-tool mode-tool">Mode<select id="modeSelect"><option value="normal">Normal</option><option value="eighties">80s</option><option value="document">Document</option><option value="night">Dark walk</option></select></label>
+        <label class="select-tool mode-tool">Mode<select id="modeSelect"><option value="normal">Normal</option><option value="scanner">Scanner</option><option value="eighties">80s</option><option value="document">Document</option><option value="night">Dark walk</option></select></label>
+        <div id="scannerControls" class="scanner-controls" hidden>
+          <label class="select-tool">Scan color<select id="scanColorSelect"><option value="color">Color</option><option value="gray">Grayscale</option><option value="bw">Black & white</option></select></label>
+          <label class="tool-row">Blur / sharp <input id="scanClarityRange" type="range" min="-4" max="6" step="1" value="2"><span id="scanClarityValue">+2</span></label>
+          <label class="tool-row">Paper cleanup <input id="scanCleanupRange" type="range" min="0" max="100" step="5" value="55"><span id="scanCleanupValue">55%</span></label>
+          <label class="toggle"><input id="autoScanToggle" type="checkbox"><span>Auto steady scan</span></label>
+          <button id="addScanPageBtn" type="button" disabled>Add scan page</button>
+        </div>
         <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="320" step="5" value="150"><span id="brightnessValue">150%</span></label>
         <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0×</span></label>
         <label class="toggle"><input id="steadyToggle" type="checkbox" checked><span>Steady mode</span></label>
@@ -55,6 +63,12 @@
         <label class="select-tool">Timer<select id="timerSelect"><option value="0">Off</option><option value="3">3 sec</option><option value="5">5 sec</option><option value="10">10 sec</option></select></label>
       </section>
     </details>
+
+    <section id="scanSession" class="scan-session" hidden>
+      <div class="section-heading"><div><p class="eyebrow">SCANNER</p><h2 id="scanCount">0 pages</h2></div><button id="clearScansBtn" class="text-button" type="button">Clear</button></div>
+      <div id="scanPages" class="scan-pages"></div>
+      <div class="scan-actions"><button id="printScansBtn" type="button" disabled>Print / Save PDF</button><button id="shareScansBtn" type="button" disabled>Share scans</button></div>
+    </section>
 
     <label class="native-button">Use Phone Camera<input id="nativeCapture" type="file" accept="image/*,video/*" capture="environment"></label>
 
