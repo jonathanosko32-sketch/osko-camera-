@@ -6,10 +6,14 @@
   const settings=document.querySelector('.settings-panel');
   const code=document.getElementById('codeScannerPanel');
   const scans=document.getElementById('scanSession');
+  const scannerQuick=document.querySelector('.scanner-quick-panel');
   const tools=document.querySelector('.osko-tools');
   const nativeButton=document.querySelector('.native-button');
   const gallerySection=document.querySelector('.gallery-section');
   if(!main||!camera)return;
+
+  // Remove the older duplicate compact bar. This page uses one clear navigation bar.
+  document.querySelector('.osko-compact-bar')?.remove();
 
   function wrap(title,nodes,open=false){
     const valid=nodes.filter(Boolean).filter(n=>n.isConnected);
@@ -27,7 +31,7 @@
 
   if(settings){settings.open=false;settings.querySelector('summary').textContent='Camera controls';}
   const universalSection=wrap('Universal code scanner',[code],false);
-  const paperworkSection=wrap('Paperwork pages and PDF',[scans],false);
+  const paperworkSection=wrap('Paperwork scanner and PDF',[scannerQuick,scans],false);
 
   if(tools){
     const voice=tools.querySelector('.voice-box');
@@ -51,22 +55,38 @@
   nav.innerHTML='<button type="button" data-view="camera">Camera</button><button type="button" data-view="scan">Scan</button><button type="button" data-view="tools">Tools</button><button type="button" data-view="gallery">Pictures</button>';
   camera.before(nav);
 
-  const cameraItems=[camera,errorBox,primary,settings].filter(Boolean);
-  const scanItems=[universalSection,paperworkSection].filter(Boolean);
-  const toolItems=[tools,nativeButton].filter(Boolean);
-  const galleryItems=[gallerySection].filter(Boolean);
-  const groups={camera:cameraItems,scan:scanItems,tools:toolItems,gallery:galleryItems};
+  const viewMap=new Map([
+    [camera,new Set(['camera','scan'])],
+    [errorBox,new Set(['camera','scan'])],
+    [primary,new Set(['camera','scan'])],
+    [settings,new Set(['camera','scan'])],
+    [universalSection,new Set(['scan'])],
+    [paperworkSection,new Set(['scan'])],
+    [tools,new Set(['tools'])],
+    [nativeButton,new Set(['tools'])],
+    [gallerySection,new Set(['gallery'])]
+  ]);
+
+  async function ensureCameraForScan(){
+    if(typeof stream!=='undefined'&&stream)return;
+    if(typeof startCamera==='function'){
+      try{await startCamera();}catch(error){console.warn('Could not auto-start scan camera',error);}
+    }
+  }
 
   function setView(view,scroll=true){
-    Object.entries(groups).forEach(([name,items])=>items.forEach(el=>el.classList.toggle('app-view-hidden',name!==view)));
+    viewMap.forEach((allowed,el)=>{
+      if(el)el.classList.toggle('app-view-hidden',!allowed.has(view));
+    });
     nav.querySelectorAll('[data-view]').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view));
     localStorage.setItem('osko-camera-view',view);
     if(view==='scan'){
       const mode=document.getElementById('modeSelect');
       if(mode&&mode.value!=='codes'&&mode.value!=='scanner'){
         mode.value='codes';
-        mode.dispatchEvent(new Event('change'));
+        mode.dispatchEvent(new Event('change',{bubbles:true}));
       }
+      setTimeout(ensureCameraForScan,80);
     }
     if(scroll)window.scrollTo({top:0,behavior:'smooth'});
   }
@@ -78,7 +98,10 @@
 
   const mode=document.getElementById('modeSelect');
   mode?.addEventListener('change',()=>{
-    if(mode.value==='codes'||mode.value==='scanner')setView('scan',false);
+    if(mode.value==='codes'||mode.value==='scanner'){
+      setView('scan',false);
+      setTimeout(ensureCameraForScan,80);
+    }
   });
 
   document.querySelectorAll('.compact-section').forEach(section=>section.addEventListener('toggle',()=>{
@@ -86,6 +109,7 @@
     document.querySelectorAll('.compact-section').forEach(other=>{if(other!==section)other.open=false;});
   }));
 
-  setView(localStorage.getItem('osko-camera-view')||'camera',false);
+  const requested=localStorage.getItem('osko-camera-view');
+  setView(['camera','scan','tools','gallery'].includes(requested)?requested:'camera',false);
   document.documentElement.classList.add('osko-compact-ready');
 })();
