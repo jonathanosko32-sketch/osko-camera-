@@ -2,8 +2,6 @@
   const old=document.getElementById('voiceCommandBtn');
   const statusEl=document.getElementById('voiceStatus');
   if(!old)return;
-
-  // Shut down older voice controllers, then replace their button so only one listener remains.
   try{localStorage.setItem('osko-sky-hands-free-v1','0');if(old.classList.contains('active'))old.click()}catch{}
   const button=old.cloneNode(true);old.replaceWith(button);
 
@@ -39,8 +37,10 @@
     const badge=document.getElementById('modeBadge');if(badge)badge.textContent='NORMAL';
     const ok=await ensureCamera();move(document.getElementById('cameraCard'));status(ok?'Camera ready':'Tap Start and allow camera permission');
   }
-  async function showScanner(){
-    setView('scan');setMode('scanner');const d=openDrawer(['paperwork scanner','paperwork']);await ensureCamera();move(document.getElementById('cameraCard'));status('Document scanner ready');return d;
+  async function showScanner(color){
+    setView('scan');setMode('scanner');const d=openDrawer(['paperwork scanner','paperwork']);
+    const colorSelect=document.getElementById('scanColorSelect');if(color&&colorSelect){colorSelect.value=color;colorSelect.dispatchEvent(new Event('change',{bubbles:true}))}
+    await ensureCamera();move(document.getElementById('cameraCard'));status('Document scanner ready');return d;
   }
   function showTools(){closeDrawers();setView('tools');move(document.querySelector('.osko-tools'));status('Tools open')}
   function showPictures(){closeDrawers();setView('gallery');move(document.querySelector('.gallery-section'));status('Pictures open')}
@@ -53,21 +53,30 @@
     status('Heard: '+original);
 
     if(/stop listening|go to sleep/.test(c)){enabled=false;localStorage.setItem(KEY,'0');try{recognition.stop()}catch{};update();status('Sky listening off');return}
-    if(/open|show|go to/.test(c)&&/(document scanner|paperwork scanner|scan document|document scan)/.test(c)){await showScanner();return}
+
+    const scannerIntent=/(document|paperwork|paper|receipt|scan)/.test(c);
+    const cameraIntent=/(camera|photo|picture)/.test(c)&&!scannerIntent;
+
+    // Scanner intent always wins when document/paper/scan words are present.
+    if(scannerIntent&&/(open|show|go to|start|bring|scan)/.test(c)){
+      const color=/black.*white/.test(c)?'bw':/gray|grayscale/.test(c)?'gray':/color/.test(c)?'color':undefined;
+      await showScanner(color);
+      if(/scan it|scan now|scan page|capture page/.test(c))setTimeout(()=>typeof captureNow==='function'&&captureNow(true),1400);
+      return;
+    }
     if(/open|show|go to/.test(c)&&/(pictures|photos|gallery)/.test(c)){showPictures();return}
     if(/open|show|go to/.test(c)&&/tools/.test(c)){showTools();return}
     if(/open|show|go to/.test(c)&&/save/.test(c)){showNamedTool(['save, folders','watermark'],'Save tools');return}
     if(/open|show|go to/.test(c)&&/notes?/.test(c)){showNamedTool(['notes and skie','notes'],'Notes');return}
     if(/open|show|go to/.test(c)&&/(stickers?|emojis?)/.test(c)){showNamedTool(['emojis and stickers','stickers'],'Stickers');return}
     if(/open|show|go to/.test(c)&&/(camera controls|controls)/.test(c)){await showCamera();const s=document.querySelector('.settings-panel');if(s)s.open=true;move(s);return}
-    if(/open|show|go to|bring/.test(c)&&/camera/.test(c)){await showCamera();return}
+    if(cameraIntent&&/(open|show|go to|bring|start)/.test(c)){await showCamera();return}
     if(/close everything|go back|close scanner/.test(c)){await showCamera();return}
     if(/scroll down/.test(c)){window.scrollBy({top:Math.round(innerHeight*.72),behavior:'smooth'});status('Scrolling down');return}
     if(/scroll up/.test(c)){window.scrollBy({top:-Math.round(innerHeight*.72),behavior:'smooth'});status('Scrolling up');return}
     if(/take|snap|capture/.test(c)&&/(picture|photo)/.test(c)){await showCamera();setTimeout(()=>typeof takePhoto==='function'&&takePhoto(),1200);status('Taking picture');return}
-    if(/scan it|scan page|capture page/.test(c)){await showScanner();setTimeout(()=>typeof captureNow==='function'&&captureNow(true),1200);status('Scanning page');return}
-    if(/rear flash|flashlight|torch/.test(c)&&/on/.test(c)){await showCamera();if(typeof setRearFlash==='function')await setRearFlash(true);status('Rear flash on');return}
-    if(/rear flash|flashlight|torch/.test(c)&&/off/.test(c)){if(typeof setRearFlash==='function')await setRearFlash(false);status('Rear flash off');return}
+    if(/rear flash|flashlight|torch|camera light/.test(c)&&/on/.test(c)){await showCamera();if(typeof setRearFlash==='function')await setRearFlash(true);status('Flashlight on');return}
+    if(/rear flash|flashlight|torch|camera light/.test(c)&&/off/.test(c)){if(typeof setRearFlash==='function')await setRearFlash(false);status('Flashlight off');return}
     status('I did not recognize that command');
   }
 
