@@ -20,7 +20,7 @@
       <div id="recordingBadge" class="recording-badge" hidden>● Recording</div>
       <div id="steadyBadge" class="steady-badge" hidden>STEADY</div>
       <div id="countdown" class="countdown" hidden></div>
-      <button id="quickTorchBtn" class="quick-light" type="button" aria-label="Turn light on">LIGHT</button>
+      <button id="quickTorchBtn" class="quick-light" type="button" aria-label="Rear flash">REAR FLASH</button>
       <button id="fullscreenBtn" class="fullscreen-btn" type="button" aria-label="Full screen">⛶</button>
       <div class="viewfinder-controls">
         <button id="quickSwitchBtn" class="viewfinder-small" type="button" disabled aria-label="Switch camera">↻</button>
@@ -31,26 +31,30 @@
 
     <div id="errorBox" class="error-box" hidden></div>
 
-    <section class="quick-tools" aria-label="Camera options">
-      <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="320" step="5" value="150"><span id="brightnessValue">150%</span></label>
-      <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0×</span></label>
-      <label class="toggle"><input id="steadyToggle" type="checkbox" checked><span>Steady mode</span></label>
-      <label class="toggle"><input id="nightToggle" type="checkbox"><span>Night boost</span></label>
-      <label class="toggle"><input id="screenLightToggle" type="checkbox"><span>Screen light</span></label>
-      <label class="toggle"><input id="torchToggle" type="checkbox" disabled><span>Camera flashlight</span></label>
-      <label class="toggle"><input id="gridToggle" type="checkbox"><span>Grid</span></label>
-      <label class="toggle"><input id="stampToggle" type="checkbox"><span>Date/time stamp</span></label>
-      <label class="toggle"><input id="locationToggle" type="checkbox"><span>Location stamp</span></label>
-      <label class="select-tool">Timer<select id="timerSelect"><option value="0">Off</option><option value="3">3 sec</option><option value="5">5 sec</option><option value="10">10 sec</option></select></label>
-    </section>
-
-    <section class="controls">
+    <section class="primary-actions">
       <button id="startBtn" class="primary" type="button">Start Camera</button>
       <button id="captureBtn" type="button" disabled>Take Photo</button>
       <button id="recordBtn" type="button" disabled>Record Video</button>
       <button id="switchBtn" type="button" disabled>Switch Camera</button>
-      <label class="native-button">Use Phone Camera<input id="nativeCapture" type="file" accept="image/*,video/*" capture="environment"></label>
     </section>
+
+    <details class="settings-panel">
+      <summary>Camera settings</summary>
+      <section class="quick-tools" aria-label="Camera options">
+        <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="320" step="5" value="150"><span id="brightnessValue">150%</span></label>
+        <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0×</span></label>
+        <label class="toggle"><input id="steadyToggle" type="checkbox" checked><span>Steady mode</span></label>
+        <label class="toggle"><input id="nightToggle" type="checkbox"><span>Night boost</span></label>
+        <label class="toggle"><input id="screenLightToggle" type="checkbox"><span>Selfie light</span></label>
+        <label class="toggle"><input id="torchToggle" type="checkbox"><span>Rear flash</span></label>
+        <label class="toggle"><input id="gridToggle" type="checkbox"><span>Grid</span></label>
+        <label class="toggle"><input id="stampToggle" type="checkbox"><span>Date/time stamp</span></label>
+        <label class="toggle"><input id="locationToggle" type="checkbox"><span>Location stamp</span></label>
+        <label class="select-tool">Timer<select id="timerSelect"><option value="0">Off</option><option value="3">3 sec</option><option value="5">5 sec</option><option value="10">10 sec</option></select></label>
+      </section>
+    </details>
+
+    <label class="native-button">Use Phone Camera<input id="nativeCapture" type="file" accept="image/*,video/*" capture="environment"></label>
 
     <section class="gallery-section"><div class="section-heading"><h2>Recent captures</h2><button id="clearBtn" class="text-button" type="button">Clear</button></div><div id="gallery" class="gallery"><p class="gallery-empty">Photos and videos will appear here.</p></div></section>
   </main>
