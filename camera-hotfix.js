@@ -10,25 +10,47 @@
   let toastTimer;
   function show(message){clearTimeout(toastTimer);toast.textContent=message;toast.style.display='block';toastTimer=setTimeout(()=>toast.style.display='none',3200);}
 
+  let switchingView=false;
   function chooseView(name){
     const btn=document.querySelector(`.compact-nav [data-view="${name}"]`);
-    if(btn)btn.click();
+    if(!btn||btn.classList.contains('active')||switchingView)return;
+    switchingView=true;
+    btn.click();
+    setTimeout(()=>switchingView=false,80);
   }
-  async function openCamera(modeValue){
-    chooseView('scan');
-    const mode=$('#modeSelect');
-    if(modeValue&&mode){mode.value=modeValue;mode.dispatchEvent(new Event('change',{bubbles:true}));}
-    const camera=$('#cameraCard');
-    camera?.classList.remove('app-view-hidden');
+
+  function revealCamera(){
+    $('#cameraCard')?.classList.remove('app-view-hidden');
+    $('#errorBox')?.classList.remove('app-view-hidden');
     $('.primary-actions')?.classList.remove('app-view-hidden');
     $('.settings-panel')?.classList.remove('app-view-hidden');
+  }
+
+  let openingCamera=false;
+  async function ensureCamera(){
+    revealCamera();
+    if(typeof stream!=='undefined'&&stream)return true;
+    if(openingCamera)return false;
+    openingCamera=true;
     try{
-      if(typeof stream==='undefined'||!stream){
-        if(typeof startCamera==='function')await startCamera(); else $('#startBtn')?.click();
-      }
-      show('Camera ready');
-      setTimeout(()=>camera?.scrollIntoView({behavior:'smooth',block:'start'}),120);
-    }catch(e){show('Tap Start and allow camera permission');}
+      if(typeof startCamera==='function')await startCamera();
+      else $('#startBtn')?.click();
+      return typeof stream!=='undefined'&&Boolean(stream);
+    }catch(e){console.warn(e);return false}
+    finally{openingCamera=false}
+  }
+
+  async function openCamera(modeValue){
+    chooseView('scan');
+    revealCamera();
+    const mode=$('#modeSelect');
+    if(modeValue&&mode&&mode.value!==modeValue){
+      mode.value=modeValue;
+      mode.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    const ready=await ensureCamera();
+    show(ready?'Camera ready':'Tap Start and allow camera permission');
+    setTimeout(()=>$('#cameraCard')?.scrollIntoView({behavior:'smooth',block:'start'}),120);
   }
 
   const scanPanel=$('.scanner-quick-panel');
@@ -39,21 +61,42 @@
     scanPanel.appendChild(b);
   }
   document.querySelectorAll('[data-scan-quick]').forEach(b=>b.addEventListener('click',()=>openCamera('scanner')));
-  document.querySelector('.compact-nav [data-view="scan"]')?.addEventListener('click',()=>setTimeout(()=>openCamera(),80));
+  document.querySelector('.compact-nav [data-view="scan"]')?.addEventListener('click',()=>{
+    revealCamera();
+    setTimeout(async()=>{
+      const ready=await ensureCamera();
+      if(!ready)show('Tap Start and allow camera permission');
+    },120);
+  });
 
   const needsPhoto=new Set(['beforeAfterBtn','damageBtn','websiteSetBtn']);
   document.addEventListener('click',e=>{
     const b=e.target.closest('button'); if(!b)return;
     if(needsPhoto.has(b.id)){
       const has=typeof captures!=='undefined'&&captures.some(c=>c.type==='photo');
-      if(!has){e.preventDefault();e.stopImmediatePropagation();show('Take a photo first — opening camera');chooseView('camera');setTimeout(()=>$('#startBtn')?.click(),120);}
+      if(!has){
+        e.preventDefault();e.stopImmediatePropagation();
+        show('Take a photo first — opening camera');
+        chooseView('camera');
+        setTimeout(async()=>{await ensureCamera();$('#cameraCard')?.scrollIntoView({behavior:'smooth',block:'start'})},120);
+      }
     }
-    if(b.id==='jobProofBtn'){show('Job Proof Mode turned on');chooseView('camera');setTimeout(()=>$('#startBtn')?.click(),120);}
-    if(b.id==='auroraBurstBtn'&&(typeof stream==='undefined'||!stream)){e.preventDefault();e.stopImmediatePropagation();show('Start camera first — opening camera');chooseView('camera');setTimeout(()=>$('#startBtn')?.click(),120);}
+    if(b.id==='jobProofBtn'){
+      show('Job Proof Mode turned on');
+      chooseView('camera');
+      setTimeout(async()=>{await ensureCamera();$('#cameraCard')?.scrollIntoView({behavior:'smooth',block:'start'})},120);
+    }
+    if(b.id==='auroraBurstBtn'&&(typeof stream==='undefined'||!stream)){
+      e.preventDefault();e.stopImmediatePropagation();
+      show('Start camera first — opening camera');
+      chooseView('camera');
+      setTimeout(async()=>{await ensureCamera();$('#cameraCard')?.scrollIntoView({behavior:'smooth',block:'start'})},120);
+    }
     if(b.id==='backupBtn')show('Preparing backup file');
     if(b.id==='voiceCaptionBtn')show('Allow microphone, then speak your caption');
     if(b.id==='saveProofPackageBtn')show('Preparing proof summary');
   },true);
 
-  window.addEventListener('error',e=>console.warn('OSKO camera error:',e.message));
+  window.addEventListener('error',e=>{console.warn('OSKO camera error:',e.message);show(`Button error: ${e.message}`)});
+  window.addEventListener('unhandledrejection',e=>{console.warn('OSKO camera promise error:',e.reason);show('A camera action failed — tap Start and try again')});
 })();
