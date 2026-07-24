@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="barcode.css">
   <link rel="stylesheet" href="extras.css">
+  <link rel="stylesheet" href="storage.css">
 </head>
 <body>
   <main class="app-shell">
@@ -129,6 +130,35 @@
         </div>
         <div class="sticker-row"><button id="applyStickerBtn" type="button">Save sticker copy</button></div>
       </div>
+
+      <section id="saveWatermarkPanel" class="save-watermark-panel" aria-label="Save and watermark options">
+        <h3>Save location and watermark</h3>
+        <p class="command-help">The original stays untouched. Phone saving works directly. Google Drive opens through Android Share so you choose the Drive folder.</p>
+        <div class="save-settings-grid">
+          <label>Save choice
+            <select id="saveDestination"><option value="ask">Ask every time</option><option value="phone">Phone Pictures / Downloads</option><option value="drive">Google Drive through Share</option><option value="both">Phone and Google Drive</option></select>
+          </label>
+          <label>Project folder
+            <select id="projectFolder"><option>Personal</option><option>OSKO Ice Crystals</option><option>Alaska Ice Crystals</option><option>Website</option><option>Trucking</option><option>Load Paperwork</option><option>Receipts</option><option>Aurora</option></select>
+          </label>
+          <label>Watermark
+            <select id="watermarkChoice"><option value="none">None / personal</option><option value="osko">OSKO Ice Crystals</option><option value="alaska">Alaska Ice Crystals</option><option value="custom">Custom words</option></select>
+          </label>
+          <label>Custom watermark<input id="customWatermark" type="text" placeholder="Your name or label"></label>
+          <label>Position
+            <select id="watermarkPosition"><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option><option value="center">Center</option></select>
+          </label>
+          <label>Watermark size<input id="watermarkSize" type="range" min="3" max="12" value="6"></label>
+          <label>Transparency<input id="watermarkOpacity" type="range" min="20" max="100" value="70"></label>
+        </div>
+        <div class="save-action-row">
+          <button id="makeWatermarkBtn" type="button">Make watermarked copy</button>
+          <button id="saveLastBtn" type="button">Save last picture</button>
+          <button id="saveWebsiteBtn" type="button">Save website copy</button>
+        </div>
+        <p id="saveStatus" class="quick-status">Save settings ready</p>
+      </section>
+
       <p id="quickStatus" class="quick-status">Tools ready</p>
     </section>
 
@@ -143,5 +173,6 @@
   <script src="app.js"></script>
   <script src="barcode.js"></script>
   <script src="extras.js"></script>
+  <script src="storage.js"></script>
 </body>
 </html>
