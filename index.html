@@ -20,7 +20,7 @@
       <div id="recordingBadge" class="recording-badge" hidden>● Recording</div>
       <div id="steadyBadge" class="steady-badge" hidden>STEADY</div>
       <div id="countdown" class="countdown" hidden></div>
-      <button id="quickTorchBtn" class="quick-light" type="button" disabled aria-label="Turn camera light on">LIGHT</button>
+      <button id="quickTorchBtn" class="quick-light" type="button" aria-label="Turn light on">LIGHT</button>
       <button id="fullscreenBtn" class="fullscreen-btn" type="button" aria-label="Full screen">⛶</button>
       <div class="viewfinder-controls">
         <button id="quickSwitchBtn" class="viewfinder-small" type="button" disabled aria-label="Switch camera">↻</button>
@@ -32,11 +32,12 @@
     <div id="errorBox" class="error-box" hidden></div>
 
     <section class="quick-tools" aria-label="Camera options">
-      <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="280" step="5" value="150"><span id="brightnessValue">150%</span></label>
+      <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="320" step="5" value="150"><span id="brightnessValue">150%</span></label>
       <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0×</span></label>
       <label class="toggle"><input id="steadyToggle" type="checkbox" checked><span>Steady mode</span></label>
       <label class="toggle"><input id="nightToggle" type="checkbox"><span>Night boost</span></label>
-      <label class="toggle"><input id="torchToggle" type="checkbox" disabled><span>Flashlight</span></label>
+      <label class="toggle"><input id="screenLightToggle" type="checkbox"><span>Screen light</span></label>
+      <label class="toggle"><input id="torchToggle" type="checkbox" disabled><span>Camera flashlight</span></label>
       <label class="toggle"><input id="gridToggle" type="checkbox"><span>Grid</span></label>
       <label class="toggle"><input id="stampToggle" type="checkbox"><span>Date/time stamp</span></label>
       <label class="toggle"><input id="locationToggle" type="checkbox"><span>Location stamp</span></label>
