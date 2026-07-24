@@ -1,4 +1,4 @@
-const CACHE_NAME='osko-camera-v34';
+const CACHE_NAME='osko-camera-v35';
 const APP_SHELL=['./','./index.html','./styles.css','./barcode.css','./extras.css','./storage.css','./focus-exposure.css','./gallery-enhance.css','./highzoom-stability.css','./lowlight-balance.css','./scanner-quick.css','./photo-workshop.css','./compact-ui.css','./final-compact.css','./app.js','./barcode.js','./extras.js','./storage.js','./focus-exposure.js','./gallery-enhance.js','./highzoom-stability.js','./lowlight-balance.js','./scanner-quick.js','./photo-workshop.js','./final-compact.js','./workflow-tools.js','./camera-hotfix.js','./persistent-library.js','./voice-control.js','./manifest.json','./osko-camera-icon.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))));self.clients.claim()});
