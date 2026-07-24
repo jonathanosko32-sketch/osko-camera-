@@ -5,10 +5,11 @@
 
   const button=old.cloneNode(true);old.replaceWith(button);
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  const KEY='osko-sky-single-v2';
+  const KEY='osko-sky-single-v3';
   let recognition=null,listening=false,restartTimer=null,starting=false;
-  let enabled=localStorage.getItem(KEY)!=='0';
+  let enabled=true;
   let scrollAnimation=null;
+  localStorage.setItem(KEY,'1');
 
   const status=m=>{if(statusEl)statusEl.textContent=m;if(typeof setStatus==='function')setStatus(m)};
   const setMode=value=>{const m=document.getElementById('modeSelect');if(!m)return;m.value=value;m.dispatchEvent(new Event('change',{bubbles:true}))};
@@ -68,19 +69,19 @@
     status('I did not recognize that command');
   }
 
-  function update(){button.textContent=enabled?(listening?'Sky listening':'Start Sky listening'):'Enable hands-free Sky';button.classList.toggle('active',listening)}
-  function schedule(delay=250){clearTimeout(restartTimer);if(!enabled||document.hidden||starting)return;restartTimer=setTimeout(()=>{if(!enabled||listening||document.hidden||starting)return;starting=true;try{recognition.start()}catch{}setTimeout(()=>starting=false,350)},delay)}
+  function update(){button.textContent=listening?'Sky listening':'Start Sky listening';button.classList.toggle('active',listening)}
+  function schedule(delay=350){clearTimeout(restartTimer);if(!enabled||document.hidden||starting||listening)return;restartTimer=setTimeout(()=>{if(!enabled||listening||document.hidden||starting)return;starting=true;try{recognition.start()}catch{}setTimeout(()=>{starting=false},500)},delay)}
 
   if(!Recognition){button.disabled=true;status('Voice commands need Chrome speech support');return}
-  recognition=new Recognition();recognition.lang='en-US';recognition.continuous=true;recognition.interimResults=false;
+  recognition=new Recognition();recognition.lang='en-US';recognition.continuous=false;recognition.interimResults=false;recognition.maxAlternatives=1;
   recognition.onstart=()=>{starting=false;listening=true;update();status('Sky is listening')};
-  recognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)run(e.results[i][0].transcript).catch(()=>status('Voice command failed'))}};
-  recognition.onerror=e=>{starting=false;if(!['no-speech','aborted'].includes(e.error))status('Voice error: '+e.error);schedule(400)};
-  recognition.onend=()=>{starting=false;listening=false;update();schedule(250)};
-  button.addEventListener('click',()=>{enabled=!enabled;localStorage.setItem(KEY,enabled?'1':'0');if(enabled)schedule(20);else try{recognition.stop()}catch{};update()});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)try{recognition.stop()}catch{};else schedule(150)});
-  window.addEventListener('focus',()=>schedule(150));
-  setInterval(()=>{if(enabled&&!listening&&!document.hidden)schedule(20)},1400);
+  recognition.onresult=e=>{const text=e.results?.[0]?.[0]?.transcript||'';run(text).catch(()=>status('Voice command failed'))};
+  recognition.onerror=e=>{starting=false;listening=false;update();if(!['no-speech','aborted'].includes(e.error))status('Voice error: '+e.error);schedule(700)};
+  recognition.onend=()=>{starting=false;listening=false;update();schedule(500)};
+  button.addEventListener('click',()=>{enabled=true;localStorage.setItem(KEY,'1');try{recognition.stop()}catch{};setTimeout(()=>schedule(20),120);status('Starting Sky listening')});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)try{recognition.stop()}catch{};else{enabled=true;schedule(250)}});
+  window.addEventListener('focus',()=>{enabled=true;schedule(250)});
+  setInterval(()=>{if(enabled&&!listening&&!document.hidden)schedule(50)},1800);
   window.oskoRunVoiceCommand=run;
-  update();if(enabled)schedule(300);
+  update();schedule(500);
 })();
