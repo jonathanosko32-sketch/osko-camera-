@@ -8,6 +8,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="barcode.css">
+  <link rel="stylesheet" href="extras.css">
 </head>
 <body>
   <main class="app-shell">
@@ -83,6 +84,47 @@
       <div class="scan-actions"><button id="printScansBtn" type="button" disabled>Print / Save PDF</button><button id="shareScansBtn" type="button" disabled>Share scans</button></div>
     </section>
 
+    <section class="osko-tools" aria-label="OSKO connected tools">
+      <p class="eyebrow">SKIE TOOLS</p>
+      <h2>Talk, save, decorate, and share</h2>
+      <p class="command-help">Say “take a picture,” “write a note pickup at 9:30,” “turn flashlight on,” “make website copy,” or “share last picture.”</p>
+      <div class="tool-grid">
+        <button id="voiceCommandBtn" class="primary-tool" type="button">Talk to Skie</button>
+        <button id="shareLastBtn" type="button">Share last picture</button>
+        <button id="websiteCopyBtn" type="button">Make website copy</button>
+        <a href="https://drive.google.com/" target="_blank" rel="noopener">Open Google Drive</a>
+      </div>
+      <p id="voiceStatus" class="quick-status">Voice ready</p>
+
+      <div class="voice-box">
+        <h3>Voice and written notes</h3>
+        <textarea id="noteInput" class="note-input" placeholder="Type here, or tap Talk to Skie and say: write a note..."></textarea>
+        <div class="voice-row">
+          <button id="saveNoteBtn" type="button">Save note</button>
+          <button id="readNotesBtn" type="button">Read notes</button>
+          <button id="clearNotesBtn" type="button">Clear notes</button>
+        </div>
+        <div id="noteList" class="note-list"></div>
+      </div>
+
+      <div class="sticker-box">
+        <h3>Emojis and stickers</h3>
+        <p class="command-help">The original picture stays untouched. A decorated copy is saved.</p>
+        <div class="emoji-picker" aria-label="Emoji choices">
+          <button type="button" data-emoji="😀">😀</button><button type="button" data-emoji="😂">😂</button><button type="button" data-emoji="❤️">❤️</button><button type="button" data-emoji="👍">👍</button><button type="button" data-emoji="⭐">⭐</button><button type="button" data-emoji="🔥">🔥</button><button type="button" data-emoji="❄️">❄️</button><button type="button" data-emoji="✨">✨</button>
+          <button type="button" data-emoji="🐕">🐕</button><button type="button" data-emoji="🐺">🐺</button><button type="button" data-emoji="🦅">🦅</button><button type="button" data-emoji="🐻">🐻</button><button type="button" data-emoji="🚛">🚛</button><button type="button" data-emoji="🛻">🛻</button><button type="button" data-emoji="⚠️">⚠️</button><button type="button" data-emoji="📍">📍</button>
+        </div>
+        <input id="stickerText" class="note-input" style="min-height:52px" placeholder="Choose emoji or type a label">
+        <div class="sticker-controls">
+          <label>Size<input id="stickerSize" type="range" min="5" max="35" value="16"></label>
+          <label>Left / right<input id="stickerX" type="range" min="5" max="95" value="50"></label>
+          <label>Up / down<input id="stickerY" type="range" min="5" max="95" value="50"></label>
+        </div>
+        <div class="sticker-row"><button id="applyStickerBtn" type="button">Save sticker copy</button></div>
+      </div>
+      <p id="quickStatus" class="quick-status">Tools ready</p>
+    </section>
+
     <label class="native-button">Use Phone Camera<input id="nativeCapture" type="file" accept="image/*,video/*" capture="environment"></label>
 
     <section class="gallery-section"><div class="section-heading"><h2>Recent captures</h2><button id="clearBtn" class="text-button" type="button">Clear</button></div><div id="gallery" class="gallery"><p class="gallery-empty">Photos and videos will appear here.</p></div></section>
@@ -93,5 +135,6 @@
   </nav>
   <script src="app.js"></script>
   <script src="barcode.js"></script>
+  <script src="extras.js"></script>
 </body>
 </html>
