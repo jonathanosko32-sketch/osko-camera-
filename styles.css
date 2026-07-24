@@ -1,0 +1,104 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #04111d;
+  color: #f4fbff;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #123752 0, #071827 38%, #030b12 100%);
+}
+button { font: inherit; }
+
+.app-shell {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+}
+
+.topbar, .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.eyebrow { margin: 0; color: #66d9ff; font-size: .78rem; font-weight: 800; letter-spacing: .2em; }
+h1 { margin: 2px 0 16px; font-size: clamp(2rem, 8vw, 3.4rem); }
+h2 { margin: 0; font-size: 1.1rem; }
+.status {
+  border: 1px solid rgba(102,217,255,.35);
+  background: rgba(9,38,57,.85);
+  color: #bcefff;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: .85rem;
+}
+
+.camera-card {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  background: #000;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.42);
+}
+video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 8px;
+  color: #b9cbd7;
+  background: linear-gradient(160deg, rgba(4,17,29,.75), rgba(0,0,0,.88));
+}
+.empty-state strong { color: white; font-size: 1.25rem; }
+.recording-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(180,0,0,.86);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+  margin: 16px 0 26px;
+}
+button {
+  min-height: 52px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 16px;
+  background: #10283a;
+  color: white;
+  font-weight: 750;
+  padding: 12px 14px;
+}
+button:active { transform: translateY(1px); }
+button:disabled { opacity: .45; }
+button.primary { background: linear-gradient(135deg,#20a9d7,#14729e); }
+button.danger { background: linear-gradient(135deg,#b7192d,#7b0f1d); }
+.text-button { min-height: auto; background: transparent; border: 0; color: #75dcff; padding: 8px; }
+
+.gallery-section { margin-top: 8px; }
+.gallery { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 14px; }
+.gallery-empty { grid-column: 1/-1; color: #92a9b7; text-align: center; padding: 28px 10px; border: 1px dashed rgba(255,255,255,.15); border-radius: 18px; }
+.capture-item { overflow: hidden; border-radius: 18px; background: #0c2130; border: 1px solid rgba(255,255,255,.11); }
+.capture-item img, .capture-item video { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #000; }
+.capture-actions { display:flex; gap:8px; padding:10px; }
+.capture-actions a, .capture-actions button { flex:1; min-height:40px; display:grid; place-items:center; text-decoration:none; border-radius:12px; background:#17364b; color:white; font-weight:700; font-size:.85rem; border:0; }
+
+@media (min-width: 680px) {
+  .camera-card { aspect-ratio: 16 / 10; }
+  .controls { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .gallery { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
