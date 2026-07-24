@@ -1,0 +1,12 @@
+{
+  "name": "OSKO Camera",
+  "short_name": "OSKO Camera",
+  "description": "A private, lightweight camera app for photos and video.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#04111d",
+  "theme_color": "#071827",
+  "orientation": "any",
+  "icons": []
+}
