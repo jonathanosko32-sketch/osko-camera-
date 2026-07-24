@@ -11,8 +11,16 @@
   const saveLastBtn = $('#saveLastBtn');
   const saveWebsiteBtn = $('#saveWebsiteBtn');
   const saveStatus = $('#saveStatus');
+  const watermarkPanel = $('#saveWatermarkPanel');
 
   const SETTINGS_KEY = 'osko-save-settings-v1';
+  const WATERMARK_LABELS = {
+    none: '',
+    personal: 'PERSONAL',
+    osko: 'OSKO ICE CRYSTALS',
+    alaska: 'ALASKA ICE CRYSTALS',
+    work: 'WORK'
+  };
 
   function latestPhoto() {
     return typeof captures !== 'undefined' ? captures.find(item => item.type === 'photo') : null;
@@ -32,7 +40,6 @@
       destination: saveDestination?.value || 'ask',
       folder: projectFolder?.value || 'Personal',
       watermark: watermarkChoice?.value || 'none',
-      custom: customWatermark?.value || '',
       position: watermarkPosition?.value || 'bottom-right',
       size: Number(watermarkSize?.value || 6),
       opacity: Number(watermarkOpacity?.value || 70)
@@ -43,13 +50,35 @@
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(currentSettings())); } catch {}
   }
 
+  function setupPermanentWatermarkChoices() {
+    if (watermarkChoice) {
+      const previous = watermarkChoice.value;
+      watermarkChoice.innerHTML = [
+        ['none', 'None'],
+        ['personal', 'Personal'],
+        ['osko', 'OSKO Ice Crystals'],
+        ['alaska', 'Alaska Ice Crystals'],
+        ['work', 'Work']
+      ].map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+      watermarkChoice.value = WATERMARK_LABELS.hasOwnProperty(previous) ? previous : 'none';
+    }
+
+    if (customWatermark) customWatermark.closest('label')?.remove();
+    makeWatermarkBtn?.remove();
+
+    const help = watermarkPanel?.querySelector('.command-help');
+    if (help) help.textContent = 'Choose the watermark before taking the picture. It is placed permanently on that photo. Choose None for a clean picture.';
+
+    const heading = watermarkPanel?.querySelector('h3');
+    if (heading) heading.textContent = 'Save location and permanent watermark';
+  }
+
   function restoreSettings() {
     try {
       const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
       if (settings.destination && saveDestination) saveDestination.value = settings.destination;
       if (settings.folder && projectFolder) projectFolder.value = settings.folder;
-      if (settings.watermark && watermarkChoice) watermarkChoice.value = settings.watermark;
-      if (typeof settings.custom === 'string' && customWatermark) customWatermark.value = settings.custom;
+      if (settings.watermark && watermarkChoice && WATERMARK_LABELS.hasOwnProperty(settings.watermark)) watermarkChoice.value = settings.watermark;
       if (settings.position && watermarkPosition) watermarkPosition.value = settings.position;
       if (settings.size && watermarkSize) watermarkSize.value = settings.size;
       if (settings.opacity && watermarkOpacity) watermarkOpacity.value = settings.opacity;
@@ -119,20 +148,15 @@
       await shareToDrive(item, suffix);
       return;
     }
-    if (navigator.canShare) {
-      await shareToDrive(item, suffix);
-    } else {
+    if (navigator.canShare) await shareToDrive(item, suffix);
+    else {
       downloadItem(item, suffix);
       setSaveStatus('Saved to phone Downloads.');
     }
   }
 
   function watermarkText() {
-    const choice = watermarkChoice?.value || 'none';
-    if (choice === 'osko') return 'OSKO ICE CRYSTALS';
-    if (choice === 'alaska') return 'ALASKA ICE CRYSTALS';
-    if (choice === 'custom') return String(customWatermark?.value || '').trim();
-    return '';
+    return WATERMARK_LABELS[watermarkChoice?.value || 'none'] || '';
   }
 
   function watermarkCoordinates(position, width, height, pad) {
@@ -146,46 +170,62 @@
     return map[position] || map['bottom-right'];
   }
 
-  async function makeWatermarkedCopy(autoSave = false) {
-    const item = latestPhoto();
-    if (!item) return setSaveStatus('Take a picture first.');
+  async function applyPermanentWatermark(blob) {
     const text = watermarkText();
-    if (!text) return setSaveStatus('Choose a watermark or type custom words.');
-    try {
-      const bitmap = await createImageBitmap(item.blob);
-      const out = document.createElement('canvas');
-      out.width = bitmap.width;
-      out.height = bitmap.height;
-      const ctx = out.getContext('2d');
-      ctx.drawImage(bitmap, 0, 0);
-      const sizePercent = Number(watermarkSize?.value || 6) / 100;
-      const fontSize = Math.max(22, Math.round(out.width * sizePercent));
-      const pad = Math.max(18, Math.round(fontSize * 0.55));
-      const [x, y, align, baseline] = watermarkCoordinates(watermarkPosition?.value, out.width, out.height, pad);
-      ctx.font = `800 ${fontSize}px system-ui`;
-      ctx.textAlign = align;
-      ctx.textBaseline = baseline;
-      ctx.globalAlpha = Math.max(0.2, Math.min(1, Number(watermarkOpacity?.value || 70) / 100));
-      ctx.lineWidth = Math.max(3, Math.round(fontSize * 0.08));
-      ctx.strokeStyle = 'rgba(0,0,0,.82)';
-      ctx.strokeText(text, x, y);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(text, x, y);
-      ctx.globalAlpha = 1;
-      out.toBlob(async blob => {
-        if (!blob) return setSaveStatus('Watermark copy failed.');
-        const mode = watermarkChoice?.value === 'alaska' ? 'alaska-watermark' : 'osko-watermark';
-        if (typeof addCapture === 'function') addCapture(blob, 'photo', 'jpg', mode);
-        setSaveStatus('Watermarked copy saved; original kept.');
-        if (autoSave) {
-          const watermarked = { blob, filename: `osko-watermark-${Date.now()}.jpg`, type: 'photo' };
-          await saveItem(watermarked, '-watermarked');
-        }
-      }, 'image/jpeg', 0.96);
-    } catch (error) {
-      console.error(error);
-      setSaveStatus('Watermark copy failed.');
-    }
+    if (!text) return blob;
+
+    const bitmap = await createImageBitmap(blob);
+    const out = document.createElement('canvas');
+    out.width = bitmap.width;
+    out.height = bitmap.height;
+    const ctx = out.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+
+    const sizePercent = Number(watermarkSize?.value || 6) / 100;
+    const fontSize = Math.max(22, Math.round(out.width * sizePercent));
+    const pad = Math.max(18, Math.round(fontSize * 0.55));
+    const [x, y, align, baseline] = watermarkCoordinates(watermarkPosition?.value, out.width, out.height, pad);
+
+    ctx.font = `800 ${fontSize}px system-ui`;
+    ctx.textAlign = align;
+    ctx.textBaseline = baseline;
+    ctx.globalAlpha = Math.max(0.2, Math.min(1, Number(watermarkOpacity?.value || 70) / 100));
+    ctx.lineWidth = Math.max(3, Math.round(fontSize * 0.08));
+    ctx.strokeStyle = 'rgba(0,0,0,.82)';
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, x, y);
+    ctx.globalAlpha = 1;
+    bitmap.close?.();
+
+    return new Promise((resolve, reject) => {
+      out.toBlob(result => result ? resolve(result) : reject(new Error('Watermark failed')), 'image/jpeg', 0.96);
+    });
+  }
+
+  function installPermanentCaptureWatermark() {
+    if (typeof addCapture !== 'function') return;
+    const originalAddCapture = addCapture;
+    addCapture = function(blob, type, ext, mode = typeof modeSelect !== 'undefined' ? modeSelect.value : 'normal') {
+      const excludedModes = ['scanner', 'website', 'sticker', 'osko-watermark', 'alaska-watermark'];
+      const shouldApply = type === 'photo' && !excludedModes.includes(mode) && Boolean(watermarkText());
+
+      if (!shouldApply) {
+        originalAddCapture(blob, type, ext, mode);
+        return;
+      }
+
+      applyPermanentWatermark(blob)
+        .then(markedBlob => {
+          originalAddCapture(markedBlob, type, ext, mode);
+          setSaveStatus(`${watermarkText()} watermark applied permanently.`);
+        })
+        .catch(error => {
+          console.error(error);
+          originalAddCapture(blob, type, ext, mode);
+          setSaveStatus('Picture saved, but the watermark could not be applied.');
+        });
+    };
   }
 
   async function saveWebsiteCopy() {
@@ -211,12 +251,18 @@
     }
   }
 
-  [saveDestination, projectFolder, watermarkChoice, customWatermark, watermarkPosition, watermarkSize, watermarkOpacity]
+  setupPermanentWatermarkChoices();
+  restoreSettings();
+  installPermanentCaptureWatermark();
+
+  [saveDestination, projectFolder, watermarkChoice, watermarkPosition, watermarkSize, watermarkOpacity]
     .forEach(control => control?.addEventListener('change', saveSettings));
 
-  makeWatermarkBtn?.addEventListener('click', () => makeWatermarkedCopy(false));
+  watermarkChoice?.addEventListener('change', () => {
+    const label = watermarkChoice.options[watermarkChoice.selectedIndex]?.text || 'None';
+    setSaveStatus(label === 'None' ? 'No watermark selected.' : `${label} will be permanent on the next picture.`);
+  });
+
   saveLastBtn?.addEventListener('click', () => saveItem(latestCapture()));
   saveWebsiteBtn?.addEventListener('click', saveWebsiteCopy);
-
-  restoreSettings();
 })();
