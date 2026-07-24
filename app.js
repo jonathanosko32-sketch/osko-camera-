@@ -1,377 +1,41 @@
-const $ = selector => document.querySelector(selector);
+const $=s=>document.querySelector(s);
+const preview=$('#preview'),canvas=$('#canvas'),cameraCard=$('#cameraCard'),emptyState=$('#emptyState'),statusEl=$('#status'),recordingBadge=$('#recordingBadge'),countdownEl=$('#countdown'),gridOverlay=$('#gridOverlay'),gallery=$('#gallery'),errorBox=$('#errorBox');
+const startBtn=$('#startBtn'),captureBtn=$('#captureBtn'),recordBtn=$('#recordBtn'),switchBtn=$('#switchBtn'),quickCaptureBtn=$('#quickCaptureBtn'),quickSwitchBtn=$('#quickSwitchBtn'),quickRecordBtn=$('#quickRecordBtn'),fullscreenBtn=$('#fullscreenBtn'),dockStart=$('#dockStart'),dockPhoto=$('#dockPhoto'),dockVideo=$('#dockVideo'),dockSwitch=$('#dockSwitch'),nativeCapture=$('#nativeCapture'),clearBtn=$('#clearBtn');
+const zoomRange=$('#zoomRange'),zoomValue=$('#zoomValue'),brightnessRange=$('#brightnessRange'),brightnessValue=$('#brightnessValue'),nightToggle=$('#nightToggle'),torchToggle=$('#torchToggle'),gridToggle=$('#gridToggle'),stampToggle=$('#stampToggle'),locationToggle=$('#locationToggle'),timerSelect=$('#timerSelect');
+let stream=null,videoTrack=null,facingMode='environment',recorder=null,recordedChunks=[],captures=[],countdownRunning=false,currentLocation=null;
 
-const preview = $('#preview');
-const canvas = $('#canvas');
-const emptyState = $('#emptyState');
-const statusEl = $('#status');
-const recordingBadge = $('#recordingBadge');
-const countdownEl = $('#countdown');
-const gridOverlay = $('#gridOverlay');
-const gallery = $('#gallery');
+function setStatus(m){statusEl.textContent=m}
+function showError(m=''){errorBox.hidden=!m;errorBox.textContent=m}
+function cameraAvailable(){return Boolean(navigator.mediaDevices?.getUserMedia)}
+function resetCountdown(){countdownRunning=false;countdownEl.hidden=true;countdownEl.textContent=''}
+function setEnabled(on){[captureBtn,quickCaptureBtn,dockPhoto,switchBtn,quickSwitchBtn,dockSwitch].forEach(b=>b.disabled=!on);const vr=on&&typeof MediaRecorder!=='undefined';[recordBtn,quickRecordBtn,dockVideo].forEach(b=>b.disabled=!vr);startBtn.textContent=dockStart.textContent=on?'Stop':'Start'}
+function lightValues(){const b=Number(brightnessRange.value)/100,c=nightToggle.checked?1.24:1.08,s=nightToggle.checked?1.16:1.03;return{b,c,s}}
+function updateLight(){const{b,c,s}=lightValues();preview.style.filter=`brightness(${b}) contrast(${c}) saturate(${s})`;brightnessValue.textContent=`${brightnessRange.value}%`}
 
-const startBtn = $('#startBtn');
-const captureBtn = $('#captureBtn');
-const recordBtn = $('#recordBtn');
-const switchBtn = $('#switchBtn');
-const quickCaptureBtn = $('#quickCaptureBtn');
-const quickSwitchBtn = $('#quickSwitchBtn');
-const quickRecordBtn = $('#quickRecordBtn');
-const clearBtn = $('#clearBtn');
-const zoomRange = $('#zoomRange');
-const zoomValue = $('#zoomValue');
-const brightnessRange = $('#brightnessRange');
-const brightnessValue = $('#brightnessValue');
-const nightToggle = $('#nightToggle');
-const torchToggle = $('#torchToggle');
-const gridToggle = $('#gridToggle');
-const stampToggle = $('#stampToggle');
-const locationToggle = $('#locationToggle');
-const timerSelect = $('#timerSelect');
+async function setTorch(on){if(!videoTrack)return;try{await videoTrack.applyConstraints({advanced:[{torch:on}]});torchToggle.checked=on;setStatus(on?'Flashlight on':'Flashlight off')}catch(e){torchToggle.checked=false;torchToggle.disabled=true;showError('This camera does not allow flashlight control in Chrome.');setStatus('Flashlight unavailable')}}
 
-let stream = null;
-let facingMode = 'environment';
-let recorder = null;
-let recordedChunks = [];
-let captures = [];
-let videoTrack = null;
-let currentLocation = null;
-let countdownRunning = false;
+function setupCapabilities(){videoTrack=stream?.getVideoTracks()[0]||null;const caps=videoTrack?.getCapabilities?.()||{};if(caps.zoom){zoomRange.min=caps.zoom.min;zoomRange.max=caps.zoom.max;zoomRange.step=caps.zoom.step||.1;zoomRange.value=videoTrack.getSettings().zoom||caps.zoom.min;zoomRange.disabled=false}else{zoomRange.min=zoomRange.max=zoomRange.value=1;zoomRange.disabled=true}zoomValue.textContent=`${Number(zoomRange.value).toFixed(1)}×`;torchToggle.disabled=!caps.torch;torchToggle.checked=false}
 
-function setStatus(message) {
-  statusEl.textContent = message;
-}
+async function stopCamera(){resetCountdown();if(recorder?.state==='recording')recorder.stop();if(torchToggle.checked)await setTorch(false);stream?.getTracks().forEach(t=>t.stop());stream=null;videoTrack=null;preview.srcObject=null;emptyState.hidden=false;zoomRange.disabled=true;torchToggle.disabled=true;setEnabled(false);setStatus('Camera off')}
 
-function cameraAvailable() {
-  return Boolean(navigator.mediaDevices?.getUserMedia);
-}
+async function startCamera(){showError('');if(stream){await stopCamera();return}if(!cameraAvailable()){showError('Live camera is unavailable here. Tap “Use Phone Camera” below.');setStatus('Use phone camera');return}try{setStatus('Opening camera…');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facingMode},width:{ideal:3840},height:{ideal:2160}},audio:true});preview.srcObject=stream;await preview.play();emptyState.hidden=true;setupCapabilities();setEnabled(true);updateLight();setStatus('Camera ready')}catch(e){console.error(e);stream=null;setEnabled(false);const reason=e?.name==='NotAllowedError'?'Camera or microphone permission is blocked. Allow permission in Chrome, then tap Start again.':'The live camera could not start. Use the Phone Camera button as a reliable fallback.';showError(reason);setStatus('Camera blocked')}}
 
-function resetCountdown() {
-  countdownRunning = false;
-  countdownEl.hidden = true;
-  countdownEl.textContent = '';
-}
+async function switchCamera(){if(!stream)return;resetCountdown();stream.getTracks().forEach(t=>t.stop());stream=null;videoTrack=null;facingMode=facingMode==='environment'?'user':'environment';await startCamera()}
 
-function setCameraButtons(enabled) {
-  captureBtn.disabled = quickCaptureBtn.disabled = !enabled;
-  switchBtn.disabled = quickSwitchBtn.disabled = !enabled;
-  const canRecord = enabled && typeof MediaRecorder !== 'undefined';
-  recordBtn.disabled = quickRecordBtn.disabled = !canRecord;
-}
+async function getLocation(){if(!locationToggle.checked)return null;if(currentLocation)return currentLocation;return new Promise(resolve=>{if(!navigator.geolocation){resolve(null);return}navigator.geolocation.getCurrentPosition(p=>{currentLocation={lat:p.coords.latitude,lon:p.coords.longitude};resolve(currentLocation)},()=>resolve(null),{enableHighAccuracy:true,timeout:7000,maximumAge:60000})})}
+function addCapture(blob,type,ext){const url=URL.createObjectURL(blob),stamp=new Date().toISOString().replace(/[:.]/g,'-');captures.unshift({url,type,filename:`osko-${type}-${stamp}.${ext}`});renderGallery()}
+function drawStamp(ctx,w,h,loc){const lines=[];if(stampToggle.checked)lines.push(new Date().toLocaleString());if(loc)lines.push(`${loc.lat.toFixed(6)}, ${loc.lon.toFixed(6)}`);if(!lines.length)return;const size=Math.max(24,Math.round(w/45)),pad=Math.round(size*.65),lh=Math.round(size*1.25),box=lines.length*lh+pad*2;ctx.font=`600 ${size}px system-ui`;ctx.textBaseline='top';ctx.fillStyle='rgba(0,0,0,.62)';ctx.fillRect(0,h-box,w,box);ctx.fillStyle='#fff';lines.forEach((line,i)=>ctx.fillText(line,pad,h-box+pad+i*lh))}
+async function captureNow(){if(!stream||!preview.videoWidth){showError('Start the live camera first, or use Phone Camera.');return}const loc=await getLocation();canvas.width=preview.videoWidth;canvas.height=preview.videoHeight;const ctx=canvas.getContext('2d'),{b,c,s}=lightValues();ctx.filter=`brightness(${b}) contrast(${c}) saturate(${s})`;ctx.drawImage(preview,0,0,canvas.width,canvas.height);ctx.filter='none';drawStamp(ctx,canvas.width,canvas.height,loc);canvas.toBlob(blob=>{if(blob){addCapture(blob,'photo','jpg');setStatus('Photo captured')}},'image/jpeg',.96)}
+async function takePhoto(){if(countdownRunning||!stream)return;countdownRunning=true;[captureBtn,quickCaptureBtn,dockPhoto].forEach(b=>b.disabled=true);try{for(let i=Number(timerSelect.value);i>0;i--){if(!stream)return;countdownEl.hidden=false;countdownEl.textContent=i;setStatus(`Photo in ${i}`);await new Promise(r=>setTimeout(r,1000))}resetCountdown();await captureNow()}finally{resetCountdown();if(stream)[captureBtn,quickCaptureBtn,dockPhoto].forEach(b=>b.disabled=false)}}
+function bestMime(){return['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||''}
+function setRecordingUI(on){recordingBadge.hidden=!on;recordBtn.textContent=dockVideo.textContent=on?'Stop':'Video';recordBtn.classList.toggle('danger',on);quickRecordBtn.classList.toggle('danger',on);quickRecordBtn.textContent=on?'■':'●'}
+function toggleRecording(){if(!stream||typeof MediaRecorder==='undefined')return;if(recorder?.state==='recording'){recorder.stop();return}recordedChunks=[];const mime=bestMime();recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);recorder.ondataavailable=e=>{if(e.data.size)recordedChunks.push(e.data)};recorder.onstop=()=>{const type=recorder.mimeType||'video/webm',ext=type.includes('mp4')?'mp4':'webm';addCapture(new Blob(recordedChunks,{type}),'video',ext);setRecordingUI(false);setStatus('Video saved')};recorder.start(1000);setRecordingUI(true);setStatus('Recording')}
+function renderGallery(){gallery.innerHTML='';if(!captures.length){gallery.innerHTML='<p class="gallery-empty">Photos and videos will appear here.</p>';return}captures.forEach((c,i)=>{const card=document.createElement('article');card.className='capture-item';card.innerHTML=`${c.type==='photo'?`<img src="${c.url}" alt="OSKO capture">`:`<video src="${c.url}" controls playsinline></video>`}<div class="capture-actions"><a href="${c.url}" download="${c.filename}">Save</a><button type="button" data-remove="${i}">Delete</button></div>`;gallery.appendChild(card)})}
+function bindTap(el,fn){let last=0;el.addEventListener('pointerup',e=>{e.preventDefault();const now=Date.now();if(now-last<350)return;last=now;fn()});el.addEventListener('click',e=>e.preventDefault())}
 
-function getPreviewBrightness() {
-  return Number(brightnessRange.value) / 100;
-}
-
-function updatePreviewLight() {
-  const brightness = getPreviewBrightness();
-  const contrast = nightToggle.checked ? 1.18 : 1.05;
-  const saturation = nightToggle.checked ? 1.12 : 1.02;
-  preview.style.filter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
-  brightnessValue.textContent = `${brightnessRange.value}%`;
-}
-
-async function setTorch(enabled) {
-  if (!videoTrack) return;
-  try {
-    await videoTrack.applyConstraints({ advanced: [{ torch: enabled }] });
-    torchToggle.checked = enabled;
-    setStatus(enabled ? 'Flashlight on' : 'Flashlight off');
-  } catch (error) {
-    console.warn('Torch unavailable', error);
-    torchToggle.checked = false;
-    torchToggle.disabled = true;
-    setStatus('Flashlight unavailable');
-  }
-}
-
-async function stopCamera() {
-  resetCountdown();
-  if (recorder?.state === 'recording') recorder.stop();
-  if (torchToggle.checked) await setTorch(false);
-  stream?.getTracks().forEach(track => track.stop());
-  stream = null;
-  videoTrack = null;
-  preview.srcObject = null;
-  emptyState.hidden = false;
-  setCameraButtons(false);
-  zoomRange.disabled = true;
-  torchToggle.disabled = true;
-  torchToggle.checked = false;
-  startBtn.textContent = 'Start Camera';
-  setStatus('Camera off');
-}
-
-function setupCameraCapabilities() {
-  videoTrack = stream?.getVideoTracks()[0] || null;
-  const capabilities = videoTrack?.getCapabilities?.() || {};
-
-  if (capabilities.zoom) {
-    zoomRange.min = capabilities.zoom.min;
-    zoomRange.max = capabilities.zoom.max;
-    zoomRange.step = capabilities.zoom.step || 0.1;
-    zoomRange.value = videoTrack.getSettings().zoom || capabilities.zoom.min;
-    zoomValue.textContent = `${Number(zoomRange.value).toFixed(1)}×`;
-    zoomRange.disabled = false;
-  } else {
-    zoomRange.min = zoomRange.max = zoomRange.value = 1;
-    zoomValue.textContent = '1.0×';
-    zoomRange.disabled = true;
-  }
-
-  torchToggle.disabled = !capabilities.torch;
-  torchToggle.checked = false;
-}
-
-async function startCamera() {
-  if (!cameraAvailable()) {
-    setStatus('Camera unsupported');
-    alert('Try Chrome or Safari over HTTPS.');
-    return;
-  }
-
-  if (stream) {
-    await stopCamera();
-    return;
-  }
-
-  try {
-    resetCountdown();
-    setStatus('Opening camera…');
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: facingMode },
-        width: { ideal: 3840 },
-        height: { ideal: 2160 }
-      },
-      audio: true
-    });
-    preview.srcObject = stream;
-    await preview.play();
-    emptyState.hidden = true;
-    setCameraButtons(true);
-    startBtn.textContent = 'Stop Camera';
-    setupCameraCapabilities();
-    updatePreviewLight();
-    setStatus('Camera ready');
-    document.querySelector('.camera-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (error) {
-    console.error(error);
-    stream = null;
-    setCameraButtons(false);
-    resetCountdown();
-    setStatus('Permission needed');
-    alert('Allow camera and microphone permission, then tap Start Camera again.');
-  }
-}
-
-async function switchCamera() {
-  if (!stream) return;
-  resetCountdown();
-  stream.getTracks().forEach(track => track.stop());
-  stream = null;
-  facingMode = facingMode === 'environment' ? 'user' : 'environment';
-  await startCamera();
-}
-
-async function getLocation() {
-  if (!locationToggle.checked) return null;
-  if (currentLocation) return currentLocation;
-  setStatus('Getting location…');
-
-  return new Promise(resolve => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        currentLocation = {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude
-        };
-        resolve(currentLocation);
-      },
-      () => {
-        setStatus('Location unavailable');
-        resolve(null);
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-    );
-  });
-}
-
-function addCapture(blob, type, extension) {
-  const url = URL.createObjectURL(blob);
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  captures.unshift({ url, type, filename: `osko-${type}-${stamp}.${extension}` });
-  renderGallery();
-}
-
-function drawStamp(context, width, height, location) {
-  const lines = [];
-  if (stampToggle.checked) lines.push(new Date().toLocaleString());
-  if (location) lines.push(`${location.lat.toFixed(6)}, ${location.lon.toFixed(6)}`);
-  if (!lines.length) return;
-
-  const size = Math.max(24, Math.round(width / 45));
-  const padding = Math.round(size * 0.65);
-  const lineHeight = Math.round(size * 1.25);
-  const boxHeight = lines.length * lineHeight + padding * 2;
-  context.font = `600 ${size}px system-ui`;
-  context.textBaseline = 'top';
-  context.fillStyle = 'rgba(0,0,0,.62)';
-  context.fillRect(0, height - boxHeight, width, boxHeight);
-  context.fillStyle = '#fff';
-  lines.forEach((line, index) => context.fillText(line, padding, height - boxHeight + padding + index * lineHeight));
-}
-
-async function captureNow() {
-  if (!stream || !preview.videoWidth) return;
-  const location = await getLocation();
-  canvas.width = preview.videoWidth;
-  canvas.height = preview.videoHeight;
-  const context = canvas.getContext('2d');
-
-  const brightness = getPreviewBrightness();
-  const contrast = nightToggle.checked ? 1.18 : 1.05;
-  const saturation = nightToggle.checked ? 1.12 : 1.02;
-  context.filter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
-  context.drawImage(preview, 0, 0, canvas.width, canvas.height);
-  context.filter = 'none';
-  drawStamp(context, canvas.width, canvas.height, location);
-
-  canvas.toBlob(blob => {
-    if (!blob) return;
-    addCapture(blob, 'photo', 'jpg');
-    setStatus('Photo captured');
-  }, 'image/jpeg', 0.96);
-}
-
-async function takePhoto() {
-  if (countdownRunning || !stream) return;
-  countdownRunning = true;
-  captureBtn.disabled = quickCaptureBtn.disabled = true;
-
-  try {
-    const seconds = Number(timerSelect.value);
-    for (let remaining = seconds; remaining > 0; remaining -= 1) {
-      if (!stream) return;
-      countdownEl.hidden = false;
-      countdownEl.textContent = remaining;
-      setStatus(`Photo in ${remaining}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    resetCountdown();
-    await captureNow();
-  } finally {
-    resetCountdown();
-    if (stream) captureBtn.disabled = quickCaptureBtn.disabled = false;
-  }
-}
-
-function bestVideoMimeType() {
-  return ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']
-    .find(type => MediaRecorder.isTypeSupported(type)) || '';
-}
-
-function setRecordingUi(active) {
-  recordingBadge.hidden = !active;
-  recordBtn.textContent = active ? 'Stop Recording' : 'Record Video';
-  recordBtn.classList.toggle('danger', active);
-  quickRecordBtn.classList.toggle('danger', active);
-  quickRecordBtn.textContent = active ? '■' : '●';
-  quickRecordBtn.setAttribute('aria-label', active ? 'Stop recording' : 'Record video');
-}
-
-function toggleRecording() {
-  if (!stream || typeof MediaRecorder === 'undefined') return;
-  if (recorder?.state === 'recording') {
-    recorder.stop();
-    return;
-  }
-
-  recordedChunks = [];
-  const mimeType = bestVideoMimeType();
-  recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-  recorder.ondataavailable = event => {
-    if (event.data.size) recordedChunks.push(event.data);
-  };
-  recorder.onstop = () => {
-    const type = recorder.mimeType || 'video/webm';
-    const extension = type.includes('mp4') ? 'mp4' : 'webm';
-    addCapture(new Blob(recordedChunks, { type }), 'video', extension);
-    setRecordingUi(false);
-    setStatus('Video saved');
-  };
-  recorder.start(1000);
-  setRecordingUi(true);
-  setStatus('Recording');
-}
-
-function removeCapture(index) {
-  URL.revokeObjectURL(captures[index].url);
-  captures.splice(index, 1);
-  renderGallery();
-}
-
-function renderGallery() {
-  gallery.innerHTML = '';
-  if (!captures.length) {
-    gallery.innerHTML = '<p class="gallery-empty">Photos and videos will appear here.</p>';
-    return;
-  }
-
-  captures.forEach((capture, index) => {
-    const card = document.createElement('article');
-    card.className = 'capture-item';
-    const media = capture.type === 'photo'
-      ? `<img src="${capture.url}" alt="OSKO camera capture">`
-      : `<video src="${capture.url}" controls playsinline></video>`;
-    card.innerHTML = `${media}<div class="capture-actions"><a href="${capture.url}" download="${capture.filename}">Save</a><button type="button" data-remove="${index}">Delete</button></div>`;
-    gallery.appendChild(card);
-  });
-}
-
-startBtn.addEventListener('click', startCamera);
-captureBtn.addEventListener('click', takePhoto);
-quickCaptureBtn.addEventListener('click', takePhoto);
-recordBtn.addEventListener('click', toggleRecording);
-quickRecordBtn.addEventListener('click', toggleRecording);
-switchBtn.addEventListener('click', switchCamera);
-quickSwitchBtn.addEventListener('click', switchCamera);
-
-brightnessRange.addEventListener('input', updatePreviewLight);
-nightToggle.addEventListener('change', () => {
-  if (nightToggle.checked && Number(brightnessRange.value) < 165) brightnessRange.value = 165;
-  updatePreviewLight();
-  setStatus(nightToggle.checked ? 'Night boost on' : 'Night boost off');
-});
-torchToggle.addEventListener('change', () => setTorch(torchToggle.checked));
-gridToggle.addEventListener('change', () => { gridOverlay.hidden = !gridToggle.checked; });
-zoomRange.addEventListener('input', async () => {
-  zoomValue.textContent = `${Number(zoomRange.value).toFixed(1)}×`;
-  try {
-    await videoTrack?.applyConstraints({ advanced: [{ zoom: Number(zoomRange.value) }] });
-  } catch (error) {
-    console.warn(error);
-  }
-});
-locationToggle.addEventListener('change', () => {
-  if (!locationToggle.checked) currentLocation = null;
-});
-clearBtn.addEventListener('click', () => {
-  captures.forEach(capture => URL.revokeObjectURL(capture.url));
-  captures = [];
-  renderGallery();
-});
-gallery.addEventListener('click', event => {
-  const button = event.target.closest('[data-remove]');
-  if (button) removeCapture(Number(button.dataset.remove));
-});
-window.addEventListener('beforeunload', () => stream?.getTracks().forEach(track => track.stop()));
-
-updatePreviewLight();
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(console.error));
-}
-if (!cameraAvailable()) setStatus('Camera unsupported');
+[[startBtn,startCamera],[dockStart,startCamera],[captureBtn,takePhoto],[quickCaptureBtn,takePhoto],[dockPhoto,takePhoto],[recordBtn,toggleRecording],[quickRecordBtn,toggleRecording],[dockVideo,toggleRecording],[switchBtn,switchCamera],[quickSwitchBtn,switchCamera],[dockSwitch,switchCamera]].forEach(([el,fn])=>bindTap(el,fn));
+fullscreenBtn.addEventListener('click',async()=>{try{if(!document.fullscreenElement)await cameraCard.requestFullscreen?.();else await document.exitFullscreen?.()}catch(e){showError('Full screen is not supported by this browser.')}});
+brightnessRange.addEventListener('input',updateLight);nightToggle.addEventListener('change',()=>{if(nightToggle.checked&&Number(brightnessRange.value)<185)brightnessRange.value=185;updateLight();setStatus(nightToggle.checked?'Night boost on':'Night boost off')});torchToggle.addEventListener('change',()=>setTorch(torchToggle.checked));gridToggle.addEventListener('change',()=>gridOverlay.hidden=!gridToggle.checked);zoomRange.addEventListener('input',async()=>{zoomValue.textContent=`${Number(zoomRange.value).toFixed(1)}×`;try{await videoTrack?.applyConstraints({advanced:[{zoom:Number(zoomRange.value)}]})}catch{showError('Zoom is not supported by this camera.')}});locationToggle.addEventListener('change',()=>{if(!locationToggle.checked)currentLocation=null});
+nativeCapture.addEventListener('change',()=>{const file=nativeCapture.files?.[0];if(!file)return;const type=file.type.startsWith('video/')?'video':'photo',ext=(file.name.split('.').pop()|| (type==='video'?'mp4':'jpg')).toLowerCase();addCapture(file,type,ext);setStatus('Phone camera capture added');nativeCapture.value=''});
+clearBtn.addEventListener('click',()=>{captures.forEach(c=>URL.revokeObjectURL(c.url));captures=[];renderGallery()});gallery.addEventListener('click',e=>{const b=e.target.closest('[data-remove]');if(!b)return;const i=Number(b.dataset.remove);URL.revokeObjectURL(captures[i].url);captures.splice(i,1);renderGallery()});
+window.addEventListener('beforeunload',()=>stream?.getTracks().forEach(t=>t.stop()));updateLight();setEnabled(false);if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(console.error));
