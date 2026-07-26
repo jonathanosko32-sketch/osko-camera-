@@ -10,8 +10,28 @@
   <link rel="stylesheet" href="barcode.css">
   <link rel="stylesheet" href="extras.css">
   <link rel="stylesheet" href="storage.css">
+  <link rel="stylesheet" href="crystal-case.css">
 </head>
 <body>
+  <section id="crystalGate" class="crystal-gate" aria-label="OSKO crystal camera case">
+    <div class="crystal-case">
+      <div class="crystal-half left"></div>
+      <div class="crystal-half right"></div>
+      <div class="crystal-seam"></div>
+      <div class="crystal-title"><strong>OSKO</strong><span>CRYSTAL CAMERA</span></div>
+      <button id="crystalEnter" class="crystal-enter" type="button">OPEN CAMERA</button>
+    </div>
+  </section>
+
+  <section id="shotPicker" class="shot-picker" hidden aria-label="Choose your photo">
+    <div class="shot-picker-card">
+      <h2>Choose the picture you want</h2>
+      <p>The camera took three. Tap the one you want to keep.</p>
+      <div id="shotPickerGrid" class="shot-picker-grid"></div>
+      <button id="shotPickerCancel" class="shot-picker-cancel" type="button">Cancel</button>
+    </div>
+  </section>
+
   <main class="app-shell">
     <header class="topbar"><div><p class="eyebrow">ALASKA ICE CRYSTALS</p><h1>Camera</h1></div><span id="status" class="status">Ready</span></header>
 
@@ -26,12 +46,24 @@
       <div id="steadyBadge" class="steady-badge" hidden>STEADY</div>
       <div id="modeBadge" class="mode-badge">NORMAL</div>
       <div id="countdown" class="countdown" hidden></div>
+      <button id="cameraExit" class="camera-exit" type="button" aria-label="Close camera">← Close</button>
       <button id="quickTorchBtn" class="quick-light" type="button" aria-label="Rear flash">REAR FLASH</button>
       <button id="fullscreenBtn" class="fullscreen-btn" type="button" aria-label="Full screen">⛶</button>
       <div class="viewfinder-controls">
         <button id="quickSwitchBtn" class="viewfinder-small" type="button" disabled aria-label="Switch camera">↻</button>
         <button id="quickCaptureBtn" class="shutter" type="button" disabled aria-label="Take photo"><span></span></button>
         <button id="quickRecordBtn" class="viewfinder-small record-dot" type="button" disabled aria-label="Record video">●</button>
+      </div>
+    </section>
+
+    <section class="shot-mode-panel" aria-label="Photo shooting mode">
+      <p class="eyebrow">HOW THE SHUTTER WORKS</p>
+      <h2>Choose your picture style</h2>
+      <p>OSKO Best Shot stays selected unless you change it.</p>
+      <div class="shot-mode-grid">
+        <button class="shot-mode" type="button" data-shot-mode="best"><strong>1 · OSKO Best Shot</strong><span>Takes 3 and keeps the clearest.</span></button>
+        <button class="shot-mode" type="button" data-shot-mode="choose"><strong>2 · Choose Your Shot</strong><span>Takes 3 and you pick one.</span></button>
+        <button class="shot-mode" type="button" data-shot-mode="single"><strong>3 · Single Shot</strong><span>Takes exactly one picture.</span></button>
       </div>
     </section>
 
@@ -176,5 +208,6 @@
   <script src="extras.js"></script>
   <script src="storage.js"></script>
   <script src="workflow-tools.js"></script>
+  <script src="crystal-case.js"></script>
 </body>
 </html>
