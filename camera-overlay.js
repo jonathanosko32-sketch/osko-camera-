@@ -141,11 +141,28 @@
   overlayLowLight.addEventListener('input', () => relayRange(lowLightRange, overlayLowLight.value));
   presetButtons.forEach(button => button.addEventListener('click', () => relayRange(zoomRange, button.dataset.overlayZoom)));
 
-  photoBtn.addEventListener('click', () => {
-    if (cameraIsRunning()) captureBtn?.click();
-    else startBtn?.click();
-    setTimeout(syncFromMain, 500);
+  photoBtn.addEventListener('click', async () => {
+    if (cameraIsRunning()) {
+      captureBtn?.click();
+      return;
+    }
+
+    photoBtn.disabled = true;
+    photoBtn.textContent = 'OPENING…';
+    try {
+      if (typeof startCamera === 'function') {
+        await startCamera();
+      } else {
+        startBtn?.click();
+      }
+    } catch (error) {
+      console.error('Could not start camera from crystal controls', error);
+      if (typeof showError === 'function') showError('Camera did not open. Tap Camera permission in Chrome, then try again.');
+    } finally {
+      setTimeout(syncFromMain, 700);
+    }
   });
+
   flipBtn.addEventListener('click', () => switchBtn?.click());
   fullBtn.addEventListener('click', () => fullscreenBtn?.click());
   steadyBtn.addEventListener('click', () => {
