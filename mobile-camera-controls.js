@@ -10,6 +10,8 @@
   if (!camera || !zoomRange) return;
 
   document.querySelector('.mobile-camera-controls')?.remove();
+  document.querySelector('.camera-live-overlay')?.remove();
+  document.querySelector('.mobile-camera-overlay-controls')?.remove();
 
   const overlay = document.createElement('section');
   overlay.className = 'mobile-camera-overlay-controls';
@@ -41,6 +43,7 @@
   }
 
   function syncOverlay() {
+    document.querySelector('.camera-live-overlay')?.remove();
     const current = Number(zoomRange.value || 1);
     const min = Number(zoomRange.min || 1);
     const max = Number(zoomRange.max || 1);
