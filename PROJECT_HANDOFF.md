@@ -45,6 +45,29 @@ The OSKO Camera is live on GitHub Pages and is being actively developed for Andr
 - Google/Share workflow for sending captures to Lens, Translate, Photos, Drive, or other Android apps
 - Native phone camera fallback
 
+## Chrome Test Camera V1 — July 26, 2026
+
+A separate compact test file was added without replacing the current camera:
+
+- File: `chrome-test-camera-v1.html`
+- Test address: `https://jonathanosko32-sketch.github.io/osko-camera-/chrome-test-camera-v1.html`
+- Alaska Ice Crystals compact shell designed for one-hand phone use
+- Camera view remains large and uncluttered
+- Extra controls are stored inside Camera, SKIE, and Pictures drawers
+- Live rear/front camera preview
+- Photo capture
+- Video recording
+- Front/rear switching
+- Brightness control
+- Digital zoom
+- Grid
+- 3, 5, and 10 second timer
+- Recent photo/video gallery with save links
+- Push-to-talk SKIE commands and typed-command fallback
+- Initial SKIE commands: take picture, switch camera, start/stop video, grid on/off, and start camera
+
+Protection rule: Do not delete or overwrite the original camera while testing this version. Continue camera development with numbered files or separate branches.
+
 ## Known issues / current priorities
 
 1. Rear hardware flashlight is inconsistent in Chrome.
@@ -64,6 +87,7 @@ The OSKO Camera is live on GitHub Pages and is being actively developed for Andr
    - stronger app-like layout
    - Android app packaging for deeper hardware access
    - trucking inspection folders and proof-photo workflows
+   - move the full existing scanner, storage, watermark, and gallery systems into the compact drawer layout after Chrome Test V1 is approved
 
 ## User feedback
 
@@ -71,7 +95,8 @@ The OSKO Camera is live on GitHub Pages and is being actively developed for Andr
 - Close-up detail is extremely good.
 - They want to use it for trucking work, personal use, documents, scanning, codes, and website images.
 - They want all features kept in one OSKO Camera system.
+- Controls must not cover the camera view; controls should be inside expandable sections and usable with one hand.
 
 ## Next-chat instruction
 
-Open this repository and inspect `PROJECT_HANDOFF.md`, `index.html`, `app.js`, `styles.css`, and `service-worker.js`. Continue from the current main branch without rebuilding from scratch.
+Open this repository and inspect `PROJECT_HANDOFF.md`, `index.html`, `app.js`, `styles.css`, `service-worker.js`, and `chrome-test-camera-v1.html`. Continue from the current main branch without rebuilding from scratch.
