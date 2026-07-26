@@ -10,8 +10,8 @@
   panel.className='highzoom-tools';
   panel.innerHTML=`
     <label class="toggle"><input id="highZoomSteadyToggle" type="checkbox" checked><span>High-zoom steady</span></label>
-    <label class="select-tool">Sharpest-frame burst<select id="highZoomBurst"><option value="3">3 frames</option><option value="4" selected>4 frames</option><option value="5">5 frames</option></select></label>
-    <div id="zoomQualityMeter" class="zoom-quality good"><strong>Zoom quality: clean</strong><span>High-zoom steady turns on automatically above 4×.</span></div>`;
+    <label class="select-tool">Sharpest-frame burst<select id="highZoomBurst"><option value="3">3 frames</option><option value="4">4 frames</option><option value="5">5 frames</option><option value="6" selected>6 frames</option><option value="8">8 frames</option></select></label>
+    <div id="zoomQualityMeter" class="zoom-quality good"><strong>Zoom quality: clean</strong><span>High-zoom steady turns on automatically at 4×.</span></div>`;
   settings.appendChild(panel);
 
   const toggle=document.getElementById('highZoomSteadyToggle');
@@ -24,10 +24,10 @@
   function currentZoom(){return Number(zoomRange.value||1)}
   function updateMeter(){
     const z=currentZoom();
-    meter.className='zoom-quality '+(z<4?'good':z<=8?'watch':'limit');
-    meter.querySelector('strong').textContent=z<4?'Zoom quality: clean':z<=8?'Zoom quality: high zoom':'Zoom quality: digital stretch';
-    meter.querySelector('span').textContent=z<4?'Normal capture is fine.':z<=8?'Sharpest-frame capture will reduce hand shake.':'Pixels may break apart; move closer when possible.';
-    if(zoomValue)zoomValue.title=z>8?'Beyond 8× may lose detail on this phone.':'';
+    meter.className='zoom-quality '+(z<4?'good':z<8?'watch':'limit');
+    meter.querySelector('strong').textContent=z<4?'Zoom quality: clean':z<8?'Zoom quality: high zoom':'Zoom quality: 8× steady assist';
+    meter.querySelector('span').textContent=z<4?'Normal capture is fine.':z<8?'Sharpest-frame capture reduces hand shake.':'Hold for one second after tapping; OSKO will compare extra frames and save the sharpest one.';
+    if(zoomValue)zoomValue.title=z>=8?'At 8×, brace the phone or rest it against something when possible.':'';
   }
 
   function cloneFrame(){
@@ -36,7 +36,8 @@
     out.width=width;out.height=height;
     const ctx=out.getContext('2d',{willReadFrequently:true});
     ctx.filter=typeof filterString==='function'?filterString():'none';
-    const crop=(typeof steadyToggle!=='undefined'&&steadyToggle.checked)?0.04:0;
+    const z=currentZoom();
+    const crop=(typeof steadyToggle!=='undefined'&&steadyToggle.checked)?(z>=8?0.07:0.04):0;
     const sx=width*crop,sy=height*crop,sw=width-sx*2,sh=height-sy*2;
     ctx.drawImage(preview,sx,sy,sw,sh,0,0,width,height);
     ctx.filter='none';
@@ -45,7 +46,7 @@
 
   function sharpnessScore(source){
     const sample=document.createElement('canvas');
-    const max=180,scale=Math.min(1,max/Math.max(source.width,source.height));
+    const max=220,scale=Math.min(1,max/Math.max(source.width,source.height));
     sample.width=Math.max(20,Math.round(source.width*scale));
     sample.height=Math.max(20,Math.round(source.height*scale));
     const ctx=sample.getContext('2d',{willReadFrequently:true});
@@ -68,24 +69,28 @@
 
   async function captureSharpest(){
     if(!stream||!preview.videoWidth){showError('Start the camera first.');return}
+    const z=currentZoom();
     if(typeof waitForSteady==='function')await waitForSteady();
-    const frames=Math.max(3,Number(burstSelect.value||4));
+    if(z>=8){setStatus('8× steady assist — hold still…');await sleep(650)}
+    const selected=Math.max(3,Number(burstSelect.value||6));
+    const frames=z>=8?Math.max(8,selected):selected;
+    const pause=z>=8?125:95;
     let best=null,bestScore=-1;
     for(let i=0;i<frames;i++){
       setStatus(`High-zoom steady ${i+1} of ${frames}…`);
       const frame=cloneFrame();
       const score=sharpnessScore(frame);
       if(score>bestScore){best=frame;bestScore=score}
-      await sleep(95);
+      await sleep(pause);
     }
     const loc=typeof getLocation==='function'?await getLocation():null;
     const ctx=best.getContext('2d');
     if(typeof drawStamp==='function')drawStamp(ctx,best.width,best.height,loc);
     best.toBlob(blob=>{
       if(!blob)return showError('Could not save the sharp frame.');
-      addCapture(blob,'photo','jpg','high-zoom steady');
-      setStatus(`Sharpest frame saved at ${currentZoom().toFixed(1)}×`);
-    },'image/jpeg',0.97);
+      addCapture(blob,'photo','jpg',z>=8?'8x steady':'high-zoom steady');
+      setStatus(`Sharpest frame saved at ${z.toFixed(1)}×`);
+    },'image/jpeg',0.98);
   }
 
   async function enhancedTakePhoto(){
