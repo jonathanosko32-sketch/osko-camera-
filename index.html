@@ -55,8 +55,8 @@
           <label class="toggle"><input id="autoScanToggle" type="checkbox"><span>Auto steady scan</span></label>
           <button id="addScanPageBtn" type="button" disabled>Add scan page</button>
         </div>
-        <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="320" step="5" value="150"><span id="brightnessValue">150%</span></label>
-        <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0×</span></label>
+        <label class="tool-row">Brightness <input id="brightnessRange" type="range" min="100" max="320" step="5" value="100"><span id="brightnessValue">100%</span></label>
+        <label class="tool-row">Zoom <input id="zoomRange" type="range" min="1" max="1" step="0.1" value="1" disabled><span id="zoomValue">1.0× · CLEAR</span></label>
         <label class="toggle"><input id="steadyToggle" type="checkbox" checked><span>Steady mode</span></label>
         <label class="toggle"><input id="nightToggle" type="checkbox"><span>Night boost</span></label>
         <label class="toggle"><input id="screenLightToggle" type="checkbox"><span>Selfie light</span></label>
@@ -171,6 +171,7 @@
     <button id="dockStart" type="button">Start</button><button id="dockPhoto" type="button" disabled>Photo</button><button id="dockVideo" type="button" disabled>Video</button><button id="dockSwitch" type="button" disabled>Flip</button>
   </nav>
   <script src="app.js"></script>
+  <script src="clarity.js"></script>
   <script src="barcode.js"></script>
   <script src="extras.js"></script>
   <script src="storage.js"></script>
