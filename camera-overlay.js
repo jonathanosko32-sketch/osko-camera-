@@ -6,11 +6,13 @@
   const brightnessRange = document.getElementById('brightnessRange');
   const exposureRange = document.getElementById('exposureRange');
   const lowLightRange = document.getElementById('lowLightStrength');
+  const startBtn = document.getElementById('startBtn');
   const captureBtn = document.getElementById('captureBtn');
   const switchBtn = document.getElementById('switchBtn');
   const torchToggle = document.getElementById('torchToggle');
   const steadyToggle = document.getElementById('steadyToggle');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const preview = document.getElementById('preview');
   if (!cameraCard || !zoomRange) return;
 
   document.querySelector('.camera-live-overlay')?.remove();
@@ -56,7 +58,7 @@
       <div class="crystal-actions">
         <button id="overlayFlashBtn" type="button">LIGHT</button>
         <button id="overlaySteadyBtn" type="button">STEADY</button>
-        <button id="overlayPhotoBtn" class="primary-crystal" type="button">PHOTO</button>
+        <button id="overlayPhotoBtn" class="primary-crystal" type="button">START CAMERA</button>
         <button id="overlayFlipBtn" type="button">FLIP</button>
         <button id="overlayFullBtn" type="button">FULL</button>
       </div>
@@ -78,6 +80,12 @@
   const fullBtn = document.getElementById('overlayFullBtn');
   const presetButtons = [...overlay.querySelectorAll('[data-overlay-zoom]')];
 
+  function cameraIsRunning() {
+    const media = preview?.srcObject;
+    const tracks = media?.getVideoTracks?.() || [];
+    return tracks.some(track => track.readyState === 'live');
+  }
+
   function copyRange(source, target) {
     if (!source || !target) return;
     target.min = source.min;
@@ -98,25 +106,30 @@
     overlayExposureValue.textContent = Number(exposureRange?.value || 0).toFixed(1);
     overlayLowLightValue.textContent = `${Math.round(Number(lowLightRange?.value || 3))}`;
 
+    const running = cameraIsRunning();
     const min = Number(zoomRange.min || 1);
     const max = Number(zoomRange.max || 1);
     const current = Number(zoomRange.value || 1);
     presetButtons.forEach(button => {
       const target = Number(button.dataset.overlayZoom);
-      button.disabled = zoomRange.disabled || target < min || target > max;
+      button.disabled = !running || zoomRange.disabled || target < min || target > max;
       button.classList.toggle('active', Math.abs(target - current) < 0.06);
     });
 
     const torchOn = Boolean(torchToggle?.checked);
     flashBtn.classList.toggle('active', torchOn);
     flashBtn.textContent = torchOn ? 'LIGHT ON' : 'LIGHT';
+    flashBtn.disabled = !running;
     steadyBtn.classList.toggle('active', Boolean(steadyToggle?.checked));
-    photoBtn.disabled = Boolean(captureBtn?.disabled);
-    flipBtn.disabled = Boolean(switchBtn?.disabled);
+    photoBtn.textContent = running ? 'PHOTO' : 'START CAMERA';
+    photoBtn.classList.toggle('start-mode', !running);
+    photoBtn.disabled = false;
+    flipBtn.disabled = !running || Boolean(switchBtn?.disabled);
+    overlay.classList.toggle('camera-off', !running);
   }
 
   function relayRange(source, value) {
-    if (!source || source.disabled) return;
+    if (!source || source.disabled || !cameraIsRunning()) return;
     source.value = value;
     source.dispatchEvent(new Event('input', { bubbles: true }));
     setTimeout(syncFromMain, 30);
@@ -128,7 +141,11 @@
   overlayLowLight.addEventListener('input', () => relayRange(lowLightRange, overlayLowLight.value));
   presetButtons.forEach(button => button.addEventListener('click', () => relayRange(zoomRange, button.dataset.overlayZoom)));
 
-  photoBtn.addEventListener('click', () => captureBtn?.click());
+  photoBtn.addEventListener('click', () => {
+    if (cameraIsRunning()) captureBtn?.click();
+    else startBtn?.click();
+    setTimeout(syncFromMain, 500);
+  });
   flipBtn.addEventListener('click', () => switchBtn?.click());
   fullBtn.addEventListener('click', () => fullscreenBtn?.click());
   steadyBtn.addEventListener('click', () => {
@@ -138,7 +155,7 @@
     syncFromMain();
   });
   flashBtn.addEventListener('click', () => {
-    if (!torchToggle) return;
+    if (!torchToggle || !cameraIsRunning()) return;
     torchToggle.checked = !torchToggle.checked;
     torchToggle.dispatchEvent(new Event('change', { bubbles: true }));
     setTimeout(syncFromMain, 200);
@@ -148,8 +165,12 @@
     .forEach(control => control.addEventListener('input', syncFromMain));
   [torchToggle, steadyToggle].filter(Boolean)
     .forEach(control => control.addEventListener('change', syncFromMain));
+  [startBtn, captureBtn, switchBtn].filter(Boolean)
+    .forEach(button => button.addEventListener('click', () => setTimeout(syncFromMain, 350)));
+  preview?.addEventListener('playing', syncFromMain);
+  preview?.addEventListener('emptied', syncFromMain);
 
-  const poll = setInterval(syncFromMain, 700);
+  const poll = setInterval(syncFromMain, 500);
   window.addEventListener('beforeunload', () => clearInterval(poll));
   syncFromMain();
 })();
