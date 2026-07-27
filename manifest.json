@@ -3,7 +3,7 @@
   "name": "Alaska Ice Crystals Camera",
   "short_name": "Ice Camera",
   "description": "The Alaska Ice Crystals camera for photos, video, document scanning, codes, notes, project saving, and Skie tools.",
-  "start_url": "./?app=alaska-ice-crystals-camera&v=92",
+  "start_url": "./?app=alaska-ice-crystals-camera&v=90",
   "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
