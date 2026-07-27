@@ -1,5 +1,5 @@
-const CACHE_NAME='osko-camera-live-v74';
-const CORE=['./','./index.html','./styles.css','./barcode.css','./extras.css','./storage.css','./crystal-case.css','./app.js','./clarity.js','./barcode.js','./extras.js','./storage.js','./workflow-tools.js','./crystal-case.js','./stability-pass.js','./finish-pass.js','./manifest.json','./osko-camera-icon.svg'];
+const CACHE_NAME='osko-camera-live-v75';
+const CORE=['./','./index.html','./styles.css','./barcode.css','./extras.css','./storage.css','./crystal-case.css','./app.js','./clarity.js','./barcode.js','./extras.js','./storage.js','./workflow-tools.js','./crystal-case.js','./stability-pass.js','./finish-pass.js','./quick-zoom.js','./manifest.json','./osko-camera-icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE)));
@@ -19,7 +19,8 @@ self.addEventListener('fetch',event=>{
         let served=response;
         if(event.request.mode==='navigate'&&response.ok){
           let html=await response.text();
-          if(!html.includes('stability-pass.js'))html=html.replace('</body>','<script src="stability-pass.js?v=74"></script><script src="finish-pass.js?v=74"></script></body>');
+          if(!html.includes('stability-pass.js'))html=html.replace('</body>','<script src="stability-pass.js?v=75"></script><script src="finish-pass.js?v=75"></script><script src="quick-zoom.js?v=75"></script></body>');
+          else if(!html.includes('quick-zoom.js'))html=html.replace('</body>','<script src="quick-zoom.js?v=75"></script></body>');
           served=new Response(html,{status:response.status,statusText:response.statusText,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}});
         }
         const copy=served.clone();
