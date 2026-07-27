@@ -4,6 +4,8 @@
   const cameraCard = document.getElementById('cameraCard');
   const watermarkChoice = document.getElementById('watermarkChoice');
   const watermarkPosition = document.getElementById('watermarkPosition');
+  const watermarkSize = document.getElementById('watermarkSize');
+  const watermarkOpacity = document.getElementById('watermarkOpacity');
   const stampToggle = document.getElementById('stampToggle');
   const saveStatus = document.getElementById('saveStatus');
   if (!cameraCard || !watermarkChoice || !stampToggle) return;
@@ -43,6 +45,15 @@
   bar.append(watermarkBtn, dateBtn);
   cameraCard.appendChild(bar);
 
+  function applyWatermarkDefaults() {
+    if (watermarkPosition) watermarkPosition.value = 'bottom-right';
+    if (watermarkSize) watermarkSize.value = '4';
+    if (watermarkOpacity) watermarkOpacity.value = '35';
+    watermarkPosition?.dispatchEvent(new Event('change', { bubbles: true }));
+    watermarkSize?.dispatchEvent(new Event('change', { bubbles: true }));
+    watermarkOpacity?.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   function save() {
     try {
       localStorage.setItem(KEY, JSON.stringify({
@@ -71,12 +82,11 @@
 
   function setWatermark(on) {
     watermarkChoice.value = on ? 'alaska' : 'none';
-    if (watermarkPosition) watermarkPosition.value = 'bottom-right';
+    if (on) applyWatermarkDefaults();
     watermarkChoice.dispatchEvent(new Event('change', { bubbles: true }));
-    watermarkPosition?.dispatchEvent(new Event('change', { bubbles: true }));
     save();
     refresh();
-    status(on ? 'Alaska Ice Crystals watermark will be added bottom right' : 'Watermark off for next picture');
+    status(on ? 'Alaska Ice Crystals watermark set small and light in the lower-right' : 'Watermark off for next picture');
   }
 
   function setDate(on) {
