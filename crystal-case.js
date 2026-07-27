@@ -9,6 +9,7 @@
   const photoTriggers=new Set(['quickCaptureBtn','captureBtn','dockPhoto']);
   let shotMode=localStorage.getItem('osko-shot-mode')||'best';
   let busy=false;
+  let gateBusy=false;
 
   function setMode(mode){
     shotMode=mode;
@@ -19,25 +20,50 @@
   }
 
   async function openCase(){
+    if(gateBusy)return;
+    gateBusy=true;
+    enter.disabled=true;
+    enter.textContent='OPENING…';
     gate.hidden=false;
     gate.classList.remove('is-closing');
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     gate.classList.add('is-open');
-    await sleep(520);
-    gate.hidden=true;
-    if(!stream)await startCamera();
+
+    try{
+      const animationFinished=sleep(780);
+      const cameraStarted=stream?Promise.resolve():startCamera();
+      await Promise.all([animationFinished,cameraStarted]);
+      if(!stream)throw new Error('Camera did not start');
+      gate.hidden=true;
+      setStatus?.('OSKO Camera ready');
+    }catch(error){
+      console.error(error);
+      gate.classList.remove('is-open');
+      gate.hidden=false;
+      enter.textContent='TRY CAMERA AGAIN';
+      showError?.('Allow camera permission, then tap Try Camera Again.');
+    }finally{
+      enter.disabled=false;
+      gateBusy=false;
+      if(stream)enter.textContent='START CAMERA';
+    }
   }
 
   async function closeCase(){
-    if(busy)return;
-    if(stream)await stopCamera();
-    gate.hidden=false;
-    gate.classList.remove('is-open');
-    gate.classList.add('is-closing');
-    await sleep(720);
-    gate.hidden=true;
-    gate.classList.remove('is-closing');
-    window.scrollTo({top:0,behavior:'smooth'});
+    if(busy||gateBusy)return;
+    gateBusy=true;
+    try{
+      if(stream)await stopCamera();
+      gate.hidden=false;
+      gate.classList.remove('is-open');
+      gate.classList.add('is-closing');
+      enter.textContent='START CAMERA';
+      await sleep(780);
+      gate.classList.remove('is-closing');
+      window.scrollTo({top:0,behavior:'smooth'});
+    }finally{
+      gateBusy=false;
+    }
   }
 
   function frameScore(imageData){
@@ -144,5 +170,6 @@
   exit?.addEventListener('click',closeCase);
   modeButtons.forEach(button=>button.addEventListener('click',()=>setMode(button.dataset.shotMode)));
   setMode(shotMode);
+  if(enter)enter.textContent='START CAMERA';
   gate.hidden=false;
 })();
