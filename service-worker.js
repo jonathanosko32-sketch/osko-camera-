@@ -1,5 +1,5 @@
-const CACHE_NAME='osko-camera-recovery-v73';
-const CORE=['./','./index.html','./styles.css','./barcode.css','./extras.css','./storage.css','./crystal-case.css','./app.js','./clarity.js','./barcode.js','./extras.js','./storage.js','./workflow-tools.js','./crystal-case.js','./manifest.json','./osko-camera-icon.svg'];
+const CACHE_NAME='osko-camera-live-v74';
+const CORE=['./','./index.html','./styles.css','./barcode.css','./extras.css','./storage.css','./crystal-case.css','./app.js','./clarity.js','./barcode.js','./extras.js','./storage.js','./workflow-tools.js','./crystal-case.js','./stability-pass.js','./finish-pass.js','./manifest.json','./osko-camera-icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE)));
@@ -13,15 +13,18 @@ self.addEventListener('activate',event=>{
 
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
-  const url=new URL(event.request.url);
   event.respondWith(
     fetch(event.request,{cache:'no-store'})
-      .then(response=>{
-        if(response&&response.ok){
-          const copy=response.clone();
-          caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));
+      .then(async response=>{
+        let served=response;
+        if(event.request.mode==='navigate'&&response.ok){
+          let html=await response.text();
+          if(!html.includes('stability-pass.js'))html=html.replace('</body>','<script src="stability-pass.js?v=74"></script><script src="finish-pass.js?v=74"></script></body>');
+          served=new Response(html,{status:response.status,statusText:response.statusText,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}});
         }
-        return response;
+        const copy=served.clone();
+        caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy));
+        return served;
       })
       .catch(()=>caches.match(event.request).then(cached=>cached||caches.match('./index.html')))
   );
