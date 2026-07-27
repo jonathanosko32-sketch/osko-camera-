@@ -1,5 +1,5 @@
-const CACHE_NAME='osko-camera-live-v79';
-const CORE=['./','./index.html','./styles.css','./barcode.css','./extras.css','./storage.css','./crystal-case.css','./app.js','./clarity.js','./barcode.js','./extras.js','./storage.js','./workflow-tools.js','./crystal-case.js','./stability-pass.js','./finish-pass.js','./quick-zoom.js','./focus-recording-lite.js','./front-framing.js','./manifest.json','./osko-camera-icon.svg'];
+const CACHE_NAME='osko-camera-live-v80';
+const CORE=['./','./index.html','./styles.css','./barcode.css','./extras.css','./storage.css','./crystal-case.css','./app.js','./clarity.js','./barcode.js','./extras.js','./storage.js','./workflow-tools.js','./crystal-case.js','./stability-pass.js','./finish-pass.js','./quick-zoom.js','./focus-recording-lite.js','./front-framing.js','./stamp-watermark-lite.js','./manifest.json','./osko-camera-icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE)));
@@ -19,9 +19,9 @@ self.addEventListener('fetch',event=>{
         let served=response;
         if(event.request.mode==='navigate'&&response.ok){
           let html=await response.text();
-          const scripts=['stability-pass.js','finish-pass.js','quick-zoom.js','focus-recording-lite.js','front-framing.js'];
+          const scripts=['stability-pass.js','finish-pass.js','quick-zoom.js','focus-recording-lite.js','front-framing.js','stamp-watermark-lite.js'];
           for(const script of scripts){
-            if(!html.includes(script))html=html.replace('</body>',`<script src="${script}?v=79"></script></body>`);
+            if(!html.includes(script))html=html.replace('</body>',`<script src="${script}?v=80"></script></body>`);
           }
           served=new Response(html,{status:response.status,statusText:response.statusText,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}});
         }
