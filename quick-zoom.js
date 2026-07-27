@@ -8,68 +8,67 @@
 
   const style = document.createElement('style');
   style.textContent = `
-    .osko-quick-zoom {
+    .osko-quick-zoom-side {
       position:absolute;
-      left:50%;
-      bottom:132px;
-      transform:translateX(-50%);
+      top:50%;
+      transform:translateY(-50%);
       z-index:45;
       display:flex;
-      gap:10px;
+      flex-direction:column;
+      gap:18px;
       align-items:center;
       justify-content:center;
-      padding:8px 10px;
-      border-radius:28px;
-      background:rgba(5,19,32,.42);
-      backdrop-filter:blur(8px);
+      padding:8px 6px;
+      border-radius:32px;
+      background:rgba(5,19,32,.28);
+      backdrop-filter:blur(6px);
     }
-    .osko-quick-zoom button {
-      width:52px;
-      height:52px;
+    .osko-quick-zoom-side.left { left:10px; }
+    .osko-quick-zoom-side.right { right:10px; }
+    .osko-quick-zoom-side button {
+      width:54px;
+      height:54px;
       border-radius:50%;
-      border:2px solid rgba(255,255,255,.82);
+      border:2px solid rgba(255,255,255,.88);
       background:#10283a;
       color:#fff;
       font:800 16px/1 system-ui,sans-serif;
       box-shadow:0 5px 18px rgba(0,0,0,.38);
       padding:0;
     }
-    .osko-quick-zoom button.active {
+    .osko-quick-zoom-side button.active {
       background:#fff;
       color:#10283a;
       transform:scale(1.08);
     }
-    .osko-quick-zoom button:disabled {
-      opacity:.35;
-    }
+    .osko-quick-zoom-side button:disabled { opacity:.35; }
     @media (max-width:420px){
-      .osko-quick-zoom{gap:8px;bottom:128px}
-      .osko-quick-zoom button{width:48px;height:48px;font-size:15px}
+      .osko-quick-zoom-side{gap:16px;padding:6px 4px}
+      .osko-quick-zoom-side.left{left:6px}
+      .osko-quick-zoom-side.right{right:6px}
+      .osko-quick-zoom-side button{width:48px;height:48px;font-size:15px}
     }
   `;
   document.head.appendChild(style);
 
-  const bar = document.createElement('div');
-  bar.className = 'osko-quick-zoom';
-  bar.setAttribute('aria-label', 'Quick zoom');
+  const leftBar = document.createElement('div');
+  leftBar.className = 'osko-quick-zoom-side left';
+  leftBar.setAttribute('aria-label', 'Near zoom controls');
+
+  const rightBar = document.createElement('div');
+  rightBar.className = 'osko-quick-zoom-side right';
+  rightBar.setAttribute('aria-label', 'Far zoom controls');
+
   const levels = [1, 2, 4, 8];
+  const buttons = [];
 
-  function maxZoom() {
-    return Number(zoomRange.max || 1);
-  }
-
-  function currentZoom() {
-    return Number(zoomRange.value || 1);
-  }
-
-  function nearestLevel(value) {
-    return levels.reduce((best, level) => Math.abs(level - value) < Math.abs(best - value) ? level : best, levels[0]);
-  }
+  function maxZoom() { return Number(zoomRange.max || 1); }
+  function currentZoom() { return Number(zoomRange.value || 1); }
 
   function refresh() {
     const max = maxZoom();
     const current = currentZoom();
-    [...bar.children].forEach(button => {
+    buttons.forEach(button => {
       const requested = Number(button.dataset.zoom);
       button.disabled = requested > max + 0.01;
       button.classList.toggle('active', Math.abs(current - Math.min(requested, max)) < 0.12);
@@ -103,10 +102,12 @@
       event.stopPropagation();
       applyZoom(level);
     });
-    bar.appendChild(button);
+    buttons.push(button);
+    (level <= 2 ? leftBar : rightBar).appendChild(button);
   });
 
-  cameraCard.appendChild(bar);
+  cameraCard.appendChild(leftBar);
+  cameraCard.appendChild(rightBar);
   zoomRange.addEventListener('input', refresh);
   zoomRange.addEventListener('change', refresh);
 
@@ -119,7 +120,6 @@
   window.oskoQuickZoom = {
     set: applyZoom,
     levels: () => levels.filter(level => level <= maxZoom()),
-    current: currentZoom,
-    nearest: () => nearestLevel(currentZoom())
+    current: currentZoom
   };
 })();
