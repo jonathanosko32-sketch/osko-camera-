@@ -83,10 +83,20 @@
       return;
     }
     await runLocked('Switching camera', async () => {
-      await original.switch();
+      // The original switch function calls startCamera after it closes the old lens.
+      // Temporarily restore the original starter so the protection lock does not block that reopen.
+      const protectedStart = startCamera;
+      try {
+        startCamera = original.start;
+        await original.switch();
+      } finally {
+        startCamera = protectedStart;
+      }
       state.expectedCameraOn = Boolean(stream);
+      if (!stream) throw new Error('The other camera did not reopen');
       watchCurrentTrack();
-    }, 500);
+      announce(facingMode === 'user' ? 'Front camera ready' : 'Rear camera ready');
+    }, 650);
   }
 
   async function stableFlash() {
