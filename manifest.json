@@ -1,16 +1,24 @@
 {
-  "id": "./?app=alaska-ice-crystals-camera",
-  "name": "Alaska Ice Crystals Camera",
-  "short_name": "Ice Camera",
+  "id": "./?app=osko-camera-rebuilt",
+  "name": "OSKO Camera Rebuilt Test",
+  "short_name": "OSKO Rebuilt",
   "description": "The Alaska Ice Crystals camera for photos, video, document scanning, codes, notes, project saving, and Skie tools.",
-  "start_url": "./?app=alaska-ice-crystals-camera&v=90",
+  "start_url": "./?app=osko-camera-rebuilt&v=1",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#04111d",
   "theme_color": "#071827",
   "orientation": "any",
-  "categories": ["photo", "utilities", "productivity"],
+  "categories": [
+    "photo",
+    "utilities",
+    "productivity"
+  ],
   "prefer_related_applications": false,
   "icons": [
     {
